@@ -41,6 +41,7 @@ Doctor Tracker is a secure admin portal for managing doctors and the patients as
 |---|---|---|
 | 1.1 Project scaffold | 2026-11-14 | Repo + Express 5 / TypeScript backend: validated env, pino logging, unified error shape, Zod `handler()` wrapper, helmet, CORS allowlist, 10kb body cap, rate limiting, Atlas connection, graceful shutdown, fail-fast on busy port. 6 automated tests + manual curl checks |
 | 1.2 Auth API | 2026-11-14 | Seeded admin, bcrypt login, 15-min JWT access token + rotating 7-day refresh token in httpOnly/Lax cookies, atomic rotation with reuse detection (10 s grace), logout revokes the session family, `requireAuth` / `requireRole`, login brute-force limit. 16 automated tests + manual flow on Atlas |
+| 2.1 Doctors API | 2026-11-14 | Doctor + Patient models with ESR indexes, doctor CRUD, indexed prefix search (`searchKey`), 5 filters + 8 sorts, page-number pagination (parallel find + count), patient counts in one `$group`, delete guard, hospitals + options lookups, `npm run db:explain`. 22 automated tests + 16 manual checks |
 
 ## Current API surface
 Base URL (local): `http://localhost:8082`
@@ -53,7 +54,15 @@ Base URL (local): `http://localhost:8082`
 | POST | `/api/auth/logout` | cookie optional | 204, revokes the session and clears cookies |
 | GET | `/api/auth/me` | `dt_access` cookie | `{ data: { user } }` · 401 `UNAUTHENTICATED` / `TOKEN_EXPIRED` |
 
-Seed the admin: `cd backend && npm run seed:admin` (uses `ADMIN_NAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`).
+| GET | `/api/doctors` | admin | list: `page, limit, search, specialization, hospital, status, joinedFrom, joinedTo, expMin, expMax, sort` → `{ data, meta }` |
+| GET | `/api/doctors/hospitals` | admin | distinct hospital names |
+| GET | `/api/doctors/options` | admin | `?search=` → `[{ id, name, specialization }]` (≤ 20) |
+| GET | `/api/doctors/:id` | admin | doctor + `patientCount` |
+| POST | `/api/doctors` | admin | create → 201 · 409 on duplicate email |
+| PATCH | `/api/doctors/:id` | admin | partial update |
+| DELETE | `/api/doctors/:id` | admin | 204 · 409 `DOCTOR_HAS_PATIENTS` |
+
+Seed the admin: `cd backend && npm run seed:admin` (uses `ADMIN_NAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`). Check index usage: `npm run db:explain`.
 
 ## Known issues
 _None._

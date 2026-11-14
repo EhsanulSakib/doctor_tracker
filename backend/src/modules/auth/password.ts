@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs';
+import { isTest } from '../../config/env.js';
 
-const ROUNDS = 12;
+// Cost 12 in real use (~0.3 s per hash). Tests use the minimum so the suite stays fast.
+const ROUNDS = isTest ? 4 : 12;
 
 let dummyHash: Promise<string> | undefined;
 

@@ -28,11 +28,17 @@ function mapError(err: unknown): MappedError {
   }
 
   if (err instanceof ZodError) {
+    // One message per field: that's what a form can show next to an input.
+    const byPath = new Map<string, string>();
+    for (const issue of err.issues) {
+      const path = issue.path.join('.');
+      if (!byPath.has(path)) byPath.set(path, issue.message);
+    }
     return fail(
       400,
       'VALIDATION_ERROR',
       'Some fields are invalid',
-      err.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })),
+      [...byPath].map(([path, message]) => ({ path, message })),
     );
   }
 

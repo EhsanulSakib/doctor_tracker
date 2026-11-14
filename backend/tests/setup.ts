@@ -5,8 +5,13 @@ import { afterAll, afterEach, beforeAll } from 'vitest';
 let mongo: MongoMemoryServer;
 
 beforeAll(async () => {
-  mongo = await MongoMemoryServer.create();
+  mongo = await MongoMemoryServer.create({
+    // A throwaway test database doesn't need a multi-GB cache; slow disks also need more start time.
+    instance: { launchTimeout: 60_000, args: ['--wiredTigerCacheSizeGB', '0.25'] },
+  });
   await mongoose.connect(mongo.getUri());
+  // Build indexes up front so unique constraints are enforced from the first test.
+  await Promise.all(Object.values(mongoose.models).map((model) => model.init()));
 });
 
 afterEach(async () => {

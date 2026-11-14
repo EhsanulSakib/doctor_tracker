@@ -10,6 +10,7 @@ next-env.d.ts
 
 # tests
 coverage/
+.tmp/
 
 # env files (keep the examples)
 .env

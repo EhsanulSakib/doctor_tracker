@@ -31,6 +31,20 @@ Next.js 16 App Router · TypeScript · Tailwind CSS 4 · `motion` (Framer Motion
 | 429 | `RATE_LIMITED` after 10 failed logins in 15 min; show "Too many attempts, try again later" |
 | Parallel refreshes | Safe: the backend accepts the same refresh token twice within 10 s, so the proxy and the browser racing each other won't log the user out |
 
+## Backend doctors contract (built in module 2.1)
+| Thing | Value |
+|---|---|
+| List | `GET /api/doctors?page&limit&search&specialization&hospital&status&joinedFrom&joinedTo&expMin&expMax&sort` → `{ data: Doctor[], meta: { page, limit, total, totalPages } }` |
+| Doctor shape | `{ id, name, specialization, hospital, phone, email, status, yearsOfExperience, joinedAt, createdAt, updatedAt, patientCount }` (dates are ISO strings) |
+| Sort values | `-createdAt` (default), `createdAt`, `name`, `-name`, `-joinedAt`, `joinedAt`, `-yearsOfExperience`, `yearsOfExperience` |
+| Dropdown data | `GET /api/doctors/hospitals` → `string[]`; `GET /api/doctors/options?search=` → `[{ id, name, specialization }]` (≤ 20, for async selects) |
+| Create / edit | `POST /api/doctors`, `PATCH /api/doctors/:id`; dates as `YYYY-MM-DD` |
+| Validation errors | `400 { error: { code: 'VALIDATION_ERROR', details: [{ path, message }] } }`, one message per field, so map `path` straight onto form fields |
+| Duplicate email | `409 { error: { code: 'CONFLICT', details: { fields: ['email'] } } }` → show on the email field |
+| Delete guard | `409 DOCTOR_HAS_PATIENTS`, `details.patientCount` → explain in the confirm dialog |
+| Limits | `limit` max 50; empty params are ignored, so it's fine to send `?status=` |
+| Enum values | must match backend `constants/enums.ts` (mirror in `frontend/src/lib/constants.ts`) |
+
 ## State (Redux Toolkit) _(planned)_
 - `ui` slice — sidebar collapsed, theme, open dialog descriptor
 - `auth` slice — current user (hydrated from the protected layout)

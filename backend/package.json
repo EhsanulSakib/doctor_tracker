@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "seed:admin": "tsx src/scripts/seed-admin.ts"
+    "seed:admin": "tsx src/scripts/seed-admin.ts",
+    "db:explain": "tsx src/scripts/explain-queries.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
