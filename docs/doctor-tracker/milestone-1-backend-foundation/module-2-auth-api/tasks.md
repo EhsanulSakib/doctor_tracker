@@ -1,12 +1,14 @@
 # Module 1.2 — Auth API: Tasks
 
-- [ ] [backend] `user.model.ts`: name, email (unique, lowercase, trimmed), passwordHash (`select: false`), role (`admin`), timestamps
-- [ ] [backend] `refresh-token.model.ts`: userId, family (uuid), tokenHash (unique), expiresAt (TTL index), revokedAt, rotatedAt, replacedByHash
-- [ ] [backend] `tokens.ts`: sign/verify access JWT (HS256, `iss`/`aud`, short TTL); generate opaque refresh token (`crypto.randomBytes(48)` base64url) + SHA-256 hash
-- [ ] [backend] `cookies.ts`: set/clear `dt_access` + `dt_refresh` (httpOnly, `SameSite=Lax`, `Secure` in prod, `path=/`, maxAge from TTLs)
-- [ ] [backend] `auth.service.ts`: login (bcrypt compare; compare against a dummy hash when the user is missing to keep timing flat), refresh (rotation + reuse detection + grace window), logout (revoke current token), me
-- [ ] [backend] `auth.schema.ts` + `auth.routes.ts` + controller; login limiter (10 / 15 min per IP), refresh limiter (60 / 15 min per IP)
-- [ ] [backend] `middleware/auth.ts`: `requireAuth` (verify `dt_access`, attach `req.user`), `requireRole('admin')`
-- [ ] [backend] Admin seeding: shared `seedAdmin()` used by the full seed in 2.3, runnable on its own via `npm run seed:admin`
-- [ ] [test] Supertest: login ok / wrong password / unknown email / validation; `me` with and without cookie; refresh rotates both cookies; reusing an old refresh token (outside grace) revokes the family; logout clears cookies and revokes
-- [ ] [test] Manual curl with a cookie jar; show output
+- [x] [backend] `user.model.ts`: name, email (unique, lowercase, trimmed), passwordHash (`select: false`), role (`admin`), timestamps; `toPublicUser()`
+- [x] [backend] `refresh-token.model.ts`: userId, family, tokenHash (unique), expiresAt (TTL index), rotatedAt, revokedAt
+- [x] [backend] `tokens.ts`: sign/verify access JWT (HS256, `iss`/`aud`, payload shape checked); opaque refresh token (`randomBytes(48)` base64url) + SHA-256 hash
+- [x] [backend] `cookies.ts`: set/clear `dt_access` + `dt_refresh` (httpOnly, `SameSite=Lax`, `Secure` in prod, `path=/`)
+- [x] [backend] `password.ts`: bcrypt hash/verify (cost 12), dummy-hash comparison for unknown emails
+- [x] [backend] `auth.service.ts`: login, refresh (atomic claim + rotation + reuse detection + 10 s grace window), logout (revokes the session family), getCurrentUser
+- [x] [backend] `auth.schema.ts` + `auth.controller.ts` + `auth.routes.ts`; login limiter (10 failed / 15 min), refresh limiter (60 / 15 min)
+- [x] [backend] `middleware/auth.ts`: `requireAuth` (sets `req.auth`), `requireRole(...roles)`, `currentUser(req)`; `types/express.d.ts` augmentation
+- [x] [backend] Admin seeding: `seedAdmin()` in `auth.seed.ts` (idempotent upsert) + `npm run seed:admin`
+- [x] [test] Supertest (16 tests): login ok / case-insensitive email / same error for wrong password and unknown email / validation / operator injection; `me` ok / no token / tampered / expired (`TOKEN_EXPIRED`); refresh rotates / parallel refresh in grace window / reuse after grace revokes the family / missing + unknown token; logout ends the session / logout without session; seedAdmin idempotent
+- [x] [test] Manual curl against Atlas: full flow + rate limit + latency check
+- [x] [backend] Small fix found during verification: intentional `disconnectDb()` logged a misleading "MongoDB disconnected" warning; it now only warns on unexpected disconnects

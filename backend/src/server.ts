@@ -7,7 +7,7 @@ async function main() {
   await connectDb();
 
   const app = createApp();
-  // Express 5 reports listen failures (e.g. EADDRINUSE) through the callback, not by throwing.
+  
   const server = app.listen(env.PORT, (err?: Error) => {
     if (err) {
       logger.fatal({ err }, `Could not listen on port ${env.PORT}`);

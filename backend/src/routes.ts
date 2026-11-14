@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { isDbConnected } from './config/db.js';
 import { apiLimiter } from './middleware/rate-limit.js';
+import { authRouter } from './modules/auth/auth.routes.js';
 
 export const apiRouter = Router();
 
@@ -16,5 +17,4 @@ apiRouter.get('/health', (_req, res) => {
 
 apiRouter.use(apiLimiter);
 
-// Feature routers are mounted here as modules are added:
-// apiRouter.use('/auth', authRouter);
+apiRouter.use('/auth', authRouter);

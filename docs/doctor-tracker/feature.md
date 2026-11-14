@@ -9,6 +9,15 @@ Doctor Tracker is a secure admin portal for managing doctors and the patients as
 - **Database** — MongoDB (local via docker-compose, Atlas in production)
 - **Hosting** — Vercel (frontend) · Render (backend) · MongoDB Atlas
 
+## How these docs are organized
+| File | What it's for |
+|---|---|
+| `milestone-N/walkthrough.md` | index of every file the milestone produced + reading order |
+| `milestone-N/module-N/walkthrough.md` | **learning guide**: each created/changed file explained, design reasons, flows, verification, checkpoint summary |
+| `milestone-N/module-N/tasks.md` · `progress.md` · `context.md` | checklist · status · API contracts and decisions |
+| `doctor-tracker_qa_guide.md` | commands to verify each module by hand |
+| `doctor-tracker_fe_guide.md` | frontend conventions and contracts |
+
 ## Confirmed decisions (Phase 1)
 | # | Area | Decision |
 |---|---|---|
@@ -31,6 +40,7 @@ Doctor Tracker is a secure admin portal for managing doctors and the patients as
 | Module | Verified | Summary |
 |---|---|---|
 | 1.1 Project scaffold | 2026-11-14 | Repo + Express 5 / TypeScript backend: validated env, pino logging, unified error shape, Zod `handler()` wrapper, helmet, CORS allowlist, 10kb body cap, rate limiting, Atlas connection, graceful shutdown, fail-fast on busy port. 6 automated tests + manual curl checks |
+| 1.2 Auth API | 2026-11-14 | Seeded admin, bcrypt login, 15-min JWT access token + rotating 7-day refresh token in httpOnly/Lax cookies, atomic rotation with reuse detection (10 s grace), logout revokes the session family, `requireAuth` / `requireRole`, login brute-force limit. 16 automated tests + manual flow on Atlas |
 
 ## Current API surface
 Base URL (local): `http://localhost:8082`
@@ -38,6 +48,12 @@ Base URL (local): `http://localhost:8082`
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | GET | `/api/health` | public | `200 { status: 'ok', db: 'up', uptime }` · `503` when the DB is down |
+| POST | `/api/auth/login` | public (rate-limited) | `{ email, password }` → `{ data: { user } }` + `dt_access` / `dt_refresh` cookies |
+| POST | `/api/auth/refresh` | `dt_refresh` cookie | rotates both cookies → `{ data: { user } }` · 401 `SESSION_EXPIRED` / `SESSION_REVOKED` |
+| POST | `/api/auth/logout` | cookie optional | 204, revokes the session and clears cookies |
+| GET | `/api/auth/me` | `dt_access` cookie | `{ data: { user } }` · 401 `UNAUTHENTICATED` / `TOKEN_EXPIRED` |
+
+Seed the admin: `cd backend && npm run seed:admin` (uses `ADMIN_NAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`).
 
 ## Known issues
 _None._

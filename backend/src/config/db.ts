@@ -5,8 +5,12 @@ import { logger } from '../lib/logger.js';
 // Reject filter keys that are not in the schema instead of silently ignoring them.
 mongoose.set('strictQuery', true);
 
+let closing = false;
+
 export async function connectDb(uri: string = env.MONGODB_URI): Promise<void> {
-  mongoose.connection.on('disconnected', () => logger.warn('MongoDB disconnected'));
+  mongoose.connection.on('disconnected', () => {
+    if (!closing) logger.warn('MongoDB connection lost, retrying');
+  });
   mongoose.connection.on('reconnected', () => logger.info('MongoDB reconnected'));
 
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 10_000 });
@@ -14,6 +18,7 @@ export async function connectDb(uri: string = env.MONGODB_URI): Promise<void> {
 }
 
 export async function disconnectDb(): Promise<void> {
+  closing = true;
   await mongoose.disconnect();
 }
 
