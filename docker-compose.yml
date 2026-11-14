@@ -1,0 +1,21 @@
+# Local MongoDB for development.
+#   docker compose up -d
+# Set MONGO_PORT if 27017 is already taken on your machine, e.g. MONGO_PORT=27018,
+# and update MONGODB_URI in backend/.env to match.
+services:
+  mongo:
+    image: mongo:8
+    container_name: doctor-tracker-mongo
+    restart: unless-stopped
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongo-data:
