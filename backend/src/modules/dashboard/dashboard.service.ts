@@ -7,6 +7,7 @@ import {
   type PatientStatus,
   type Specialization,
 } from '../../constants/enums.js';
+import { todayAsDateOnly } from '../../lib/dates.js';
 import { TtlCache } from '../../lib/ttl-cache.js';
 import { DoctorModel } from '../doctors/doctor.model.js';
 import { PatientModel } from '../patients/patient.model.js';
@@ -33,6 +34,7 @@ type Breakdown<K extends string> = Array<{ key: K; count: number }>;
 export type DashboardStats = {
   range: DashboardRange;
   generatedAt: Date;
+  /** `from` inclusive, `to` exclusive (start of tomorrow in APP_TIMEZONE); previous period = [previousFrom, from). */
   period: { unit: Unit; from: Date; to: Date; previousFrom: Date };
   kpis: {
     totalDoctors: number;
@@ -71,10 +73,15 @@ function addUnits(date: Date, unit: Unit, amount: number): Date {
 
 const isoDay = (date: Date) => date.toISOString().slice(0, 10);
 
+/**
+ * Admission dates are calendar dates (UTC midnight), so windows are built from today's calendar date
+ * in APP_TIMEZONE and `to` is the start of tomorrow (exclusive): today's admissions always count.
+ */
 export function periodFor(range: DashboardRange, now = new Date()) {
   const { unit, buckets } = RANGES[range];
-  const from = addUnits(truncate(now, unit), unit, -(buckets - 1));
-  return { unit, buckets, from, to: now, previousFrom: addUnits(from, unit, -buckets) };
+  const today = todayAsDateOnly(now);
+  const from = addUnits(truncate(today, unit), unit, -(buckets - 1));
+  return { unit, buckets, from, to: addUnits(today, 'day', 1), previousFrom: addUnits(from, unit, -buckets) };
 }
 
 // ─── Queries ─────────────────────────────────────────────────────────────────────────────
@@ -82,7 +89,7 @@ export function periodFor(range: DashboardRange, now = new Date()) {
 /** Admissions per bucket. MongoDB groups by bucket start; empty buckets are filled in here so the chart has no gaps. */
 async function patientsOverTime({ unit, buckets, from, to }: ReturnType<typeof periodFor>) {
   const rows = await PatientModel.aggregate<{ _id: Date; count: number }>([
-    { $match: { admissionDate: { $gte: from, $lte: to } } },
+    { $match: { admissionDate: { $gte: from, $lt: to } } },
     {
       $group: {
         _id: { $dateTrunc: { date: '$admissionDate', unit, timezone: 'UTC', ...(unit === 'week' && { startOfWeek: 'monday' }) } },
@@ -150,7 +157,7 @@ const deltaPct = (current: number, previous: number) =>
 
 async function computeStats(range: DashboardRange): Promise<DashboardStats> {
   const period = periodFor(range);
-  const inPeriod = { $gte: period.from, $lte: period.to };
+  const inPeriod = { $gte: period.from, $lt: period.to };
 
   // Independent queries, all in flight at once.
   const [

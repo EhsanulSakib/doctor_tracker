@@ -76,18 +76,18 @@ Setup: log in first with a cookie jar (§ 1.2 step 3), then add `-b $J` to every
 | # | Scenario | Command | Expected |
 |---|---|---|---|
 | 1 | No session | `curl -i $B/api/doctors` | `401 UNAUTHENTICATED` |
-| 2 | Create | `curl -b $J -X POST $B/api/doctors -H "Content-Type: application/json" -d '{"name":"Dr. Lena Okafor","specialization":"Neurology","hospital":"St. Mary Hospital","phone":"+1 (555) 123-4567","email":"lena.okafor@stmary.org","yearsOfExperience":14,"joinedAt":"2021-04-12"}'` | `201`, `status: "active"`, `patientCount: 0`, no `searchKey` |
-| 3 | Duplicate email (other case) | same body with `"email":"LENA.OKAFOR@stmary.org"` | `409 CONFLICT`, `details.fields: ["email"]` |
+| 2 | Create | `curl -b $J -X POST $B/api/doctors -H "Content-Type: application/json" -d '{"name":"Dr. Nusrat Jahan","specialization":"Neurology","hospital":"Dhanmondi Lakeview Hospital","phone":"+880 1712-345678","email":"nusrat.jahan@lakeview-dhaka.example.org","yearsOfExperience":14,"joinedAt":"2021-04-12"}'` | `201`, `status: "active"`, `patientCount: 0`, no `searchKey` |
+| 3 | Duplicate email (other case) | same body with `"email":"NUSRAT.JAHAN@lakeview-dhaka.example.org"` | `409 CONFLICT`, `details.fields: ["email"]` |
 | 4 | Validation | `{"name":"X","specialization":"Wizardry","phone":"abc","email":"no","yearsOfExperience":-2,"joinedAt":"2999-01-01"}` | `400`, one message per field (`Hospital is required`, `Cannot be negative`, `Date cannot be in the future`…) |
 | 5 | Default list | `curl -b $J $B/api/doctors` | newest first, `meta { page, limit, total, totalPages }` |
-| 6 | Search | `?search=oka` · `?search=1555987` · `?search=AISHA%20rah` | surname prefix, phone digits, multi-word (case-insensitive) |
+| 6 | Search | `?search=jah` · `?search=8801712` · `?search=NUSRAT%20jah` | surname prefix, phone digits, multi-word (case-insensitive) |
 | 7 | Filters | `?specialization=Cardiology` · `?status=on_leave` · `?hospital=City%20General` · `?joinedFrom=2021-01-01&joinedTo=2023-12-31` · `?expMin=10&expMax=25` | only matching doctors |
 | 8 | Pagination | `?limit=2&page=2&sort=name` | `meta.page 2`, correct slice |
 | 9 | Bad query | `?limit=500` | `400`, `limit: Too big: expected number to be <=50` |
 | 10 | Hospitals | `$B/api/doctors/hospitals` | distinct names A→Z |
-| 11 | Options | `$B/api/doctors/options?search=sam` | `[{ id, name, specialization }]` |
+| 11 | Options | `$B/api/doctors/options?search=tan` | `[{ id, name, specialization }]` |
 | 12 | Get by id | `$B/api/doctors/<id>` · unknown id · `not-an-id` | `200` · `404` · `400 Invalid id` |
-| 13 | Update | `curl -b $J -X PATCH $B/api/doctors/<id> -d '{"name":"Dr. Lena Okafor-Mensah"}' -H "Content-Type: application/json"` | `200`; `?search=mensah` now finds her |
+| 13 | Update | `curl -b $J -X PATCH $B/api/doctors/<id> -d '{"name":"Dr. Nusrat Jahan Chowdhury"}' -H "Content-Type: application/json"` | `200`; `?search=chow` now finds her |
 | 14 | Delete guard | delete a doctor who has a patient | `409 DOCTOR_HAS_PATIENTS`, `details.patientCount` |
 | 15 | Delete | delete after removing the patients, then GET | `204`, then `404` |
 | 16 | Index usage | `cd backend && npm run db:explain` | every line starts with `✓ index` (no `COLLSCAN`) |
@@ -100,19 +100,19 @@ Setup: log in with a cookie jar (§ 1.2 step 3) and create two doctors (§ 2.1 s
 | # | Scenario | Command | Expected |
 |---|---|---|---|
 | 1 | No session | `curl -i $B/api/patients` | `401 UNAUTHENTICATED` |
-| 2 | Create | `curl -b $J -X POST $B/api/patients -H "Content-Type: application/json" -d '{"name":"Maya Chen","age":34,"gender":"female","phone":"+1 (555) 222-3333","email":"Maya.Chen@Mail.com","condition":"Asthma","admissionDate":"2026-03-15","notes":"Inhaler review","doctorId":"'$D1'"}'` | `201`, `status: "active"`, lowercased email, `doctor: { id, name, specialization }`, no `searchKey` |
+| 2 | Create | `curl -b $J -X POST $B/api/patients -H "Content-Type: application/json" -d '{"name":"Sadia Rahman","age":34,"gender":"female","phone":"+880 1819-222333","email":"Sadia.Rahman@Example.com","condition":"Asthma","admissionDate":"2026-03-15","notes":"Inhaler review","doctorId":"'$D1'"}'` | `201`, `status: "active"`, lowercased email, `doctor: { id, name, specialization }`, no `searchKey` |
 | 3 | Unknown doctor | same body with `"doctorId":"64b7f0000000000000000000"` | `404 DOCTOR_NOT_FOUND`, `details.fields: ["doctorId"]` |
 | 4 | Validation | `{"name":"X","age":200,"gender":"robot","phone":"abc","email":"no","condition":"Flu","admissionDate":"2999-01-01"}` | `400`, one message per field incl. `doctorId: Choose a doctor`, `age: Must be 120 or less` |
 | 5 | Create under a doctor | `POST $B/api/doctors/$D2/patients` with a patient body (no or another `doctorId`) | `201`, `doctorId` = `$D2`; missing `email`/`notes` come back as `null` |
 | 6 | Default list | `curl -b $J $B/api/patients` | newest admission first, each row has `doctor` |
-| 7 | Search | `?search=che` · `?search=1-555-444` · `?search=maya%20ch` | name-word prefix, phone digits (dashes ignored), multi-word |
+| 7 | Search | `?search=rah` · `?search=880-1819` · `?search=sadia%20ra` | name-word prefix, phone digits (dashes ignored), multi-word |
 | 8 | Filters | `?condition=Diabetes` · `?status=recovered` · `?gender=female` · `?doctorId=$D2` · `?admittedFrom=2026-01-01&admittedTo=2026-12-31` · `?admittedTo=2025-08-01` (inclusive) · `?condition=&status=` (ignored) | only matching patients |
 | 9 | Pagination | `?limit=2&page=2&sort=name` | `meta.page 2`, correct slice |
 | 10 | Bad query | `?limit=500&gender=robot&sort=age` | `400` with a message for each of `limit`, `gender`, `sort` |
 | 11 | Doctor's patients | `$B/api/doctors/$D2/patients?sort=name` | only `$D2`'s patients |
 | 12 | Doctor's patients, unknown doctor | `$B/api/doctors/64b7f0000000000000000000/patients` | `404 NOT_FOUND` "Doctor not found" |
 | 13 | Get by id | `$B/api/patients/<id>` · unknown id · `not-an-id` | `200` with `doctor` · `404` · `400 Invalid id` |
-| 14 | Rename | `PATCH $B/api/patients/<id>` `{"name":"Maya Lin"}` | `200`; `?search=lin` finds her, `?search=chen` doesn't |
+| 14 | Rename | `PATCH $B/api/patients/<id>` `{"name":"Sadia Islam"}` | `200`; `?search=isl` finds her, `?search=rahman` doesn't |
 | 15 | Reassign | `PATCH` `{"doctorId":"'$D2'"}` | `doctor` is now `$D2`; `GET /api/doctors` shows the counts moved |
 | 16 | Reassign to unknown doctor | `PATCH` `{"doctorId":"64b7f0000000000000000000"}` | `404 DOCTOR_NOT_FOUND`, patient unchanged |
 | 17 | Clear optional fields | `PATCH` `{"email":"","notes":null}` | `200`, `email: null`, `notes: null` |
@@ -125,7 +125,7 @@ Setup: log in with a cookie jar (§ 1.2 step 3) and create two doctors (§ 2.1 s
 **Result 2026-11-15:** scenarios 1–21 passed against a local throwaway MongoDB 8.2, then again against **Atlas** (8.0.37, test patients deleted afterwards); `db:explain` on 402 patients / 14 doctors: every query uses an index. `npm test` 70/70.
 
 ### 2.3 Dashboard API + seed
-Setup: `cd backend && npm run seed` → `Seeded 127.0.0.1/doctor_tracker · doctors 15 (11 active) · patients 200, admitted <1st of the month 11 months ago> → <yesterday or today>`. Start the API, log in (§ 1.2 step 3).
+Setup: `cd backend && npm run seed` → `Seeded 127.0.0.1/doctor_tracker (today in Asia/Dhaka: …) · doctors 15 (11 active) · patients 200, admitted <1st of the month 11 months ago> → <recent date>`. Data is Bangladeshi: names like "Dr. Priyanka Sen", hospitals like "Dhanmondi Lakeview Hospital", phones `+880 1XXX-XXXXXX`. Start the API, log in (§ 1.2 step 3).
 
 | # | Scenario | Command | Expected |
 |---|---|---|---|
@@ -142,6 +142,34 @@ Setup: `cd backend && npm run seed` → `Seeded 127.0.0.1/doctor_tracker · doct
 | 11 | Sync to Atlas | `npm run db:sync -- --yes`, then `npm run db:sync` | preview shows equal counts on both sides (users 1, doctors 15, patients 200) |
 
 **Result 2026-11-15:** all passed on the local DB (MongoDB 8.3.1) and, after `db:sync`, on Atlas (8.0.37): document-by-document hash of users / doctors / patients identical on both, same indexes. Stats on Atlas: cold ≈ 0.43 s (10 queries in parallel over the network), cached ≈ 2 ms. `npm test` 78/78.
+
+### 2.x Bangladesh + timezone update
+| # | Scenario | How | Expected |
+|---|---|---|---|
+| 1 | Seed is Bangladeshi | `npm run seed`, look at a few doctors / patients | Bangladeshi names, Bangladeshi city hospitals, every phone matches `+880 1[3-9]XX-XXXXXX`, no "other"-gender minors |
+| 2 | "Today" follows Dhaka | `npx vitest run tests/dates.test.ts` (clock faked to 20:00 UTC = 02:00 Dhaka next day) | today's Dhaka date accepted as admission date, tomorrow rejected |
+| 3 | Dashboard boundary | `periodFor` test at 20:00 UTC | 30d window ends with the Dhaka date, `to` = start of the next Dhaka day |
+| 4 | Atlas in sync | `npm run db:sync` (preview) | equal counts on both sides |
+
+**Result 2026-11-15:** `npm test` 82/82; seed checks passed; Atlas synced (users 1, doctors 15, patients 200).
+
+### 3.1 Frontend scaffold + design system
+From `frontend/`: `npm install` once.
+
+| # | Scenario | Command | Expected |
+|---|---|---|---|
+| 1 | Types | `npm run typecheck` | "Types generated successfully", no errors |
+| 2 | Lint | `npm run lint` | no output (0 problems) |
+| 3 | Build | `npm run build` | "Cache Components enabled", routes listed as `○ (Static)` |
+| 4 | Security headers | `npm start`, then `curl -I http://localhost:3000/` | `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy: frame-ancestors 'none'`, `Referrer-Policy`, `Permissions-Policy`; no `X-Powered-By` |
+| 5 | API rewrite | with the backend running: `curl http://localhost:3000/api/health` | the backend's `{"status":"ok","db":"up",…}` |
+| 6 | Fonts / theme | open http://localhost:3000 | IBM Plex Sans, paper background; `document.documentElement.dataset.theme = 'dark'` in devtools re-colours the page |
+
+Primitives were checked visually on a temporary `/kit` page (deleted at the end of the module): desktop and emulated 390px phone, light and dark, dialog / toasts / open select / date popover, no horizontal scroll on the phone, plus a scripted keyboard run (Select navigation, type-ahead, Escape order inside a dialog, focus return, `inert` app root). They'll be exercised for real on the feature pages in milestone 4.
+
+**Tip for phone screenshots on Windows:** headless Chrome can't size a window below ~500px; use DevTools-protocol device emulation (`Emulation.setDeviceMetricsOverride`) instead of `--window-size`.
+
+**Result 2026-11-15:** all passed.
 
 ## Edge-case checklist (global)
 - [x] Every protected endpoint returns 401 without a cookie (`/api/auth/me`, `/api/doctors/*`, `/api/patients/*`, `/api/dashboard/*`)

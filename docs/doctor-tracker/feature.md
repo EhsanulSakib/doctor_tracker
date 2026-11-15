@@ -1,6 +1,6 @@
 # Doctor Tracker — Feature Spec (living document)
 
-> Updated **only** when a module passes verification. Last updated: 2026-11-15 (module 2.3 verified; milestone 2 complete).
+> Updated **only** when a module passes verification. Last updated: 2026-11-15 (module 3.1 verified; Bangladesh data + Asia/Dhaka timezone applied).
 
 ## Overview
 Doctor Tracker is a secure admin portal for managing doctors and the patients assigned to them, with an analytics dashboard.
@@ -35,6 +35,7 @@ Doctor Tracker is a secure admin portal for managing doctors and the patients as
 | 12 | Seed | 1 admin, ~15 doctors, ~200 patients over 12 months, faker with fixed seed |
 | 13 | Deploy | Vercel + Render + Atlas; configs/docs + docker-compose for local MongoDB prepared; user deploys |
 | 14 | Testing | Per-module curl + `explain()` verification; Vitest + Supertest for auth / validation / delete guard; frontend typecheck + lint + build + browser check |
+| 15 | Locale (added 2026-11-15) | **Bangladesh**: seed and sample data use Bangladeshi names, fictional hospitals in Bangladeshi cities and `+880` mobile numbers; "today" is Asia/Dhaka (`APP_TIMEZONE`) on the API and the frontend; UI shows day-first dates, 12-hour time and lakh digit grouping |
 
 ## Completed modules
 | Module | Verified | Summary |
@@ -44,6 +45,8 @@ Doctor Tracker is a secure admin portal for managing doctors and the patients as
 | 2.1 Doctors API | 2026-11-14 | Doctor + Patient models with ESR indexes, doctor CRUD, indexed prefix search (`searchKey`), 5 filters + 8 sorts, page-number pagination (parallel find + count), patient counts in one `$group`, delete guard, hospitals + options lookups, `npm run db:explain`. 22 automated tests + 16 manual checks |
 | 2.2 Patients API | 2026-11-15 | Patient CRUD with doctor reassignment, indexed search, 6 filters + 5 sorts, pagination, each row's doctor via one `$in` query, nested `/api/doctors/:id/patients` (list + create, doctor lookup in parallel), clearable `email`/`notes`, 404 `DOCTOR_NOT_FOUND` for unknown body doctors, name-sort index. 26 automated tests (70 total) + 21 manual checks (local and Atlas); every patient query uses an index |
 | 2.3 Dashboard API + seed | 2026-11-15 | `GET /api/dashboard/stats?range=30d\|90d\|12m`: KPIs with delta vs previous period, zero-filled time series (bucket-aligned windows, sum = KPI), top-10 doctors, condition / status / specialization breakdowns; 10 parallel index-only queries (0 documents read); 60 s promise cache cleared on writes. Repeatable faker seed (15 doctors, 200 patients). Local MongoDB as the working DB + `npm run db:sync` to Atlas. 8 automated tests (78 total), verified on local and Atlas |
+| 2.x Bangladesh update | 2026-11-15 | Seed rewritten for Bangladesh (names, 8 fictional hospitals in Dhaka / Chattogram / Sylhet / Rajshahi / Khulna, `+880 1XXX-XXXXXX`, monsoon + winter admission peaks); `APP_TIMEZONE` (default Asia/Dhaka) decides "today": date fields accept today's Dhaka date (before, 00:00–06:00 Dhaka rejected it as "future") and dashboard windows end with today in Dhaka; local DB re-seeded and synced to Atlas. 4 new tests (82 total) |
+| 3.1 Frontend scaffold + design system | 2026-11-15 | Next.js 16.4 app (Cache Components, React Compiler, `/api` rewrite, security headers); "Clinical ledger" tokens for light/dark (WCAG AA); 17 hand-built accessible primitives (Select, Dialog/bottom sheet, Popover, Toaster, DataTable with mobile cards, Pagination, DateRangeField…); `serverFetch` / `clientFetch` with single-flight refresh; Redux UI store; Bangladesh formatting. Typecheck/lint/build clean; visual + keyboard check on the production build |
 
 ## Current API surface
 Base URL (local): `http://localhost:8082`
@@ -81,6 +84,10 @@ Scripts (from `backend/`):
 | `npm run seed:admin` | only the admin (uses `ADMIN_NAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`) |
 | `npm run db:explain` | the index behind each list and dashboard query (22) |
 | `npm run db:sync` | preview; `-- --yes` pushes local → Atlas (`SYNC_TARGET_URI`), `-- --pull --yes` pulls |
+
+The API's `APP_TIMEZONE` (default `Asia/Dhaka`) decides what "today" is for date fields and dashboard ranges.
+
+Frontend (from `frontend/`): `npm run dev` → http://localhost:3000 (start the API first; `BACKEND_URL` defaults to `http://localhost:8082`). Also `npm run typecheck`, `npm run lint`, `npm run build`. No pages beyond a placeholder yet: login and the app shell arrive in 3.2.
 
 ## Known issues
 - **SRV lookups fail on this office network.** Node's resolver gets a malformed answer from the router for `mongodb+srv://` addresses (`querySrv EBADRESP`). Workaround in place: `SYNC_TARGET_URI` uses Atlas's standard `mongodb://host1,host2,host3` string. On Render, the SRV string works.

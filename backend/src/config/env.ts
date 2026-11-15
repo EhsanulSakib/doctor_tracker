@@ -28,6 +28,12 @@ const envSchema = z.object({
   ADMIN_PASSWORD: z.string().min(8).optional(),
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+
+  // The clinic's timezone. Decides what "today" is for date-only fields and dashboard ranges.
+  APP_TIMEZONE: z
+    .string()
+    .default('Asia/Dhaka')
+    .refine((zone) => Intl.supportedValuesOf('timeZone').includes(zone), 'APP_TIMEZONE must be an IANA timezone, e.g. Asia/Dhaka'),
 });
 
 const parsed = envSchema.safeParse(process.env);

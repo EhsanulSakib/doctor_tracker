@@ -1,0 +1,172 @@
+@import "tailwindcss";
+
+/* ─── "Clinical ledger" design tokens ───────────────────────────────────────────────────────
+   Raw values live here; components only use the semantic utilities generated from @theme below
+   (bg-paper, text-ink-muted, border-line, bg-accent…), so switching data-theme re-colors everything.
+   Text pairs meet WCAG AA (4.5:1) in both themes. */
+
+:root {
+  color-scheme: light;
+
+  --paper: #faf9f6; /* app background */
+  --paper-2: #f2f0eb; /* hover / subtle fill */
+  --surface: #ffffff; /* tables, cards, dialogs */
+  --ink: #1c1f23; /* primary text */
+  --ink-muted: #5d6670; /* secondary text */
+  --ink-subtle: #757d86; /* placeholders, disabled */
+  --line: #e6e3dc; /* hairline borders */
+  --line-strong: #d3cec3; /* input borders */
+
+  --accent: #0f6e6e;
+  --accent-hover: #0b5c5c;
+  --accent-soft: #e3f0ef;
+  --accent-ink: #ffffff; /* text on accent */
+
+  --danger: #b4372f;
+  --danger-hover: #9b2d26;
+  --danger-soft: #fbecea;
+  --danger-ink: #ffffff;
+  --warning: #8f6209;
+  --warning-soft: #fbf2df;
+  --success: #2c7548;
+  --success-soft: #e5f2e9;
+  --info: #2d5e8c;
+  --info-soft: #e7eff7;
+
+  --overlay: rgb(28 31 35 / 0.36);
+  --elevation-overlay: 0 1px 2px rgb(28 31 35 / 0.06), 0 12px 32px -8px rgb(28 31 35 / 0.2);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --paper: #121417;
+  --paper-2: #1c1f24;
+  --surface: #181b1f;
+  --ink: #e8e6e1;
+  --ink-muted: #9aa2ab;
+  --ink-subtle: #79818b;
+  --line: #2a2f35;
+  --line-strong: #3b4149;
+
+  --accent: #3ba6a6;
+  --accent-hover: #55b7b7;
+  --accent-soft: #163332;
+  --accent-ink: #051615; /* white on #3ba6a6 is < 3:1, so dark text */
+
+  --danger: #ef8a80;
+  --danger-hover: #f4a49c;
+  --danger-soft: #3a1e1b;
+  --danger-ink: #1f0a08;
+  --warning: #e2b257;
+  --warning-soft: #352a13;
+  --success: #6cc08d;
+  --success-soft: #16301f;
+  --info: #7fb0e0;
+  --info-soft: #162536;
+
+  --overlay: rgb(0 0 0 / 0.6);
+  --elevation-overlay: 0 1px 2px rgb(0 0 0 / 0.4), 0 16px 40px -8px rgb(0 0 0 / 0.65);
+}
+
+/* `dark:` utilities follow data-theme (set by the theme script), not only the OS setting. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-ink: var(--danger-ink);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-overlay: var(--overlay);
+
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  /* Section labels: 11px uppercase with tracking. Page titles: 22px. */
+  --text-label: 0.6875rem;
+  --text-label--line-height: 1rem;
+  --text-label--letter-spacing: 0.07em;
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.875rem;
+  --text-title--letter-spacing: -0.01em;
+
+  --radius-control: 6px; /* buttons, inputs, badges */
+  --radius-panel: 10px; /* tables, cards, dialogs (never pill-shaped) */
+
+  --shadow-overlay: var(--elevation-overlay); /* only dialogs, popovers, toasts */
+
+  --ease-clinical: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Visible keyboard focus on every interactive element (never removed without this replacement). */
+@utility focus-ring {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  &:focus-visible {
+    outline-color: var(--accent);
+  }
+}
+
+@layer base {
+  html {
+    /* Reserve the scrollbar's space so locking scroll (dialogs) doesn't shift the layout. */
+    scrollbar-gutter: stable;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: var(--accent-soft);
+    color: var(--ink);
+  }
+
+  /* SearchInput draws its own accessible clear button. */
+  input[type="search"]::-webkit-search-cancel-button {
+    appearance: none;
+  }
+
+  /* Native date inputs: picker icon follows the theme via color-scheme; keep it visible. */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.7;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

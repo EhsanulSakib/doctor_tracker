@@ -8,7 +8,7 @@
   "data": {
     "range": "30d",
     "generatedAt": "2026-11-15T02:54:40.969Z",
-    "period": { "unit": "day", "from": "2026-10-17T00:00:00.000Z", "to": "2026-11-15T02:54:40.969Z", "previousFrom": "2026-09-17T00:00:00.000Z" },
+    "period": { "unit": "day", "from": "2026-10-17T00:00:00.000Z", "to": "2026-11-16T00:00:00.000Z", "previousFrom": "2026-09-17T00:00:00.000Z" },
     "kpis": {
       "totalDoctors": 15,
       "activeDoctors": 11,
@@ -28,11 +28,11 @@
 ## Ranges
 | Range | Bucket | Buckets | Window (`from`) | Previous period |
 |---|---|---|---|---|
-| `30d` | day | 30 | today − 29 days (midnight UTC) | the 30 days before |
+| `30d` | day | 30 | today − 29 days (today = the calendar date in `APP_TIMEZONE`, Asia/Dhaka) | the 30 days before |
 | `90d` | week (Monday) | 13 | Monday 12 weeks before this week's Monday (85–91 days) | the 13 weeks before |
 | `12m` | month | 12 | 1st of the month 11 months ago | the 12 months before |
 
-Windows are whole buckets ending with the current (partial) one, so **`sum(patientsOverTime) === kpis.newPatients.current`** in every range and both periods have the same length. Dates are UTC (admission dates are stored as UTC midnight).
+Windows are whole buckets ending with the current (partial) one, so **`sum(patientsOverTime) === kpis.newPatients.current`** in every range and both periods have the same length. Admission dates are calendar dates stored as UTC midnight; "today" is the date in `APP_TIMEZONE` (Asia/Dhaka), and `period.to` is the start of tomorrow (exclusive), so today's admissions always count, even between 00:00 and 06:00 in Dhaka when UTC is still on the previous day.
 
 ## What the range applies to
 | Range-based | Snapshot (all current data) |
@@ -64,9 +64,10 @@ The leading **`$sort` on the grouped field** is what turns a full-collection `$g
 - **Scalability caveat (README):** the cache is per process. With several API instances, a write clears only its own instance's cache; swap in Redis.
 
 ## Seed (`npm run seed`)
-- Fixed faker seed (`20261114`): the same 15 doctors and 200 patients every run; dates are relative to today, so 30d / 90d / 12m always have data.
-- Doctors: every specialization at least once, extras weighted toward common ones (General Medicine, Cardiology, Pediatrics…); 8 fictional hospitals; 11 active / 3 on leave / 1 inactive; joined 1–6 years ago; `@<hospital>.example.org` emails.
-- Patients: uneven workloads (a few busy doctors, the inactive one with few); admissions over the 12m window with a winter bump (current month weighted by how much of it has passed); 70% get a condition typical for their doctor's specialization; pediatric patients are 1–17; status by admission age (older → mostly recovered); ~70% have an email (`example.com/.net`), ~40% notes; `+1 555` phone numbers.
+- **Bangladesh data** (user requirement): Bangladeshi names (romanized; Muslim and Hindu naming, female surnames like Akter / Begum / Khatun), fictional hospitals in Bangladeshi cities, `+880 1XXX-XXXXXX` mobile numbers (operator prefixes 013–019), emails on reserved `example.*` domains.
+- Fixed faker seed (`20261114`): the same 15 doctors and 200 patients every run; dates are relative to today in Asia/Dhaka, so 30d / 90d / 12m always have data.
+- Doctors: every specialization at least once, extras weighted toward common ones (General Medicine, Cardiology, Pediatrics…); 8 fictional hospitals (Dhanmondi Lakeview Hospital, Gulshan Crescent Medical Centre, Uttara Northpoint Hospital, Mirpur Shapla Clinic, Chattogram Bayview Hospital, Sylhet Tea Valley Medical, Rajshahi Padma Care Centre, Khulna Rupsha General Hospital; Dhaka weighted ×2); 11 active / 3 on leave / 1 inactive; joined 1–6 years ago; `@<hospital>.example.org` emails.
+- Patients: uneven workloads (a few busy doctors, the inactive one with few); admissions over the 12m window with Bangladesh's seasonal pattern: a monsoon peak (Jul–Sep, dengue season) and a winter rise (current month weighted by how much of it has passed); 70% get a condition typical for their doctor's specialization; pediatric patients are 1–17 (never gender "other"); status by admission age (older → mostly recovered); ~60% have an email, ~40% notes (incl. "Advised ORS and plenty of fluids", "Platelet count to be repeated in 48 hours").
 - Wipes `doctors` + `patients` only; the admin is upserted (never duplicated); refresh tokens untouched. Refuses `NODE_ENV=production` unless `--force`.
 
 ## Local database + Atlas sync (added in this module)
@@ -75,6 +76,13 @@ The user asked to work on a local MongoDB while keeping Atlas in sync.
 - `SYNC_TARGET_URI` → Atlas (optional env var, validated in `config/env.ts`).
 - `npm run db:sync` (`scripts/db-sync.ts`): preview by default; `--yes` pushes local → Atlas, `--pull --yes` pulls. Copies `users`, `doctors`, `patients` exactly (same `_id`, timestamps, `searchKey`) in batches of 1000, clears the destination's `refreshtokens`, then `syncIndexes()` on the destination. Refuses when both URIs point at the same database; never prints URIs. Not transactional: re-run on failure.
 - **Network quirk:** Node's DNS (c-ares) asks the router `192.168.1.1` directly, which returns a malformed answer for SRV queries (`querySrv EBADRESP`); Windows' own resolver works. So `SYNC_TARGET_URI` uses Atlas's standard `mongodb://host1,host2,host3/…?replicaSet=…&tls=true&authSource=admin` form. The original SRV string stays in `.env` as a comment for Render (where SRV works).
+
+## Changes after verification (2026-11-15, user request: Bangladesh)
+- Seed rewritten for Bangladesh (above); local DB re-seeded and synced to Atlas.
+- `APP_TIMEZONE` env (default `Asia/Dhaka`, validated as an IANA zone) + `lib/dates.ts` (`todayInAppTimezone`, `todayAsDateOnly`).
+- `pastDateSchema` compares a `YYYY-MM-DD` value with today in Dhaka (timestamps still with now). Before, a patient admitted "today" between 00:00 and 06:00 Dhaka time was rejected as "in the future".
+- `periodFor` builds windows from today in Dhaka; queries use `$lt: to` (start of tomorrow).
+- Tests: `tests/dates.test.ts` (3, faked clock at 02:00 Dhaka) + a Dhaka-boundary `periodFor` test; test fixtures use Bangladeshi hospital / phone defaults. 82/82.
 
 ## Implementation notes / changes from plan
 - Ranges are aligned to whole buckets (90d = 13 weeks) so the chart and the KPI always agree; `period` added to the response so the frontend can label axes.

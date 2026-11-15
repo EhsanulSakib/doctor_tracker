@@ -2,6 +2,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../src/app.js';
 import { CONDITIONS, SPECIALIZATIONS } from '../src/constants/enums.js';
+import { todayAsDateOnly } from '../src/lib/dates.js';
 import { clearDashboardCache, periodFor } from '../src/modules/dashboard/dashboard.service.js';
 import { DoctorModel } from '../src/modules/doctors/doctor.model.js';
 import { doctorPayload, insertPatients, loginAsAdmin, patientPayload } from './helpers.js';
@@ -14,10 +15,10 @@ const stats = (range?: string) =>
     .get(`/api/dashboard/stats${range === undefined ? '' : `?range=${range}`}`)
     .set('Cookie', cookie);
 
-/** UTC calendar date `days` ago, as YYYY-MM-DD. */
+/** The calendar date `days` before today in APP_TIMEZONE (Asia/Dhaka), as YYYY-MM-DD. */
 function daysAgo(days: number): string {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - days)).toISOString().slice(0, 10);
+  const today = todayAsDateOnly();
+  return new Date(today.getTime() - days * 86_400_000).toISOString().slice(0, 10);
 }
 
 async function createDoctor(overrides: Record<string, unknown> = {}) {
@@ -167,9 +168,21 @@ describe('periodFor', () => {
 
     const months = periodFor('12m', sunday);
     expect([iso(months.from), iso(months.previousFrom)]).toEqual(['2025-12-01', '2024-12-01']);
+    expect(iso(months.to)).toBe('2026-11-16'); // exclusive: start of tomorrow
 
     // Month arithmetic from a 31st must not overflow into the next month.
-    expect(iso(periodFor('12m', new Date('2026-03-31T23:00:00.000Z')).from)).toBe('2025-04-01');
+    expect(iso(periodFor('12m', new Date('2026-03-31T10:00:00.000Z')).from)).toBe('2025-04-01');
+  });
+
+  it('uses the calendar date in Asia/Dhaka (UTC+6), not the UTC date', () => {
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+    // 20:00 UTC on the 15th is 02:00 on the 16th in Dhaka.
+    const lateEvening = periodFor('30d', new Date('2026-11-15T20:00:00.000Z'));
+    expect([iso(lateEvening.from), iso(lateEvening.to)]).toEqual(['2026-10-18', '2026-11-17']);
+
+    // 19:00 UTC on 30 Nov is already 1 December in Dhaka, so December is the current month.
+    expect(iso(periodFor('12m', new Date('2026-11-30T19:00:00.000Z')).from)).toBe('2026-01-01');
   });
 });
 

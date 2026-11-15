@@ -1,4 +1,5 @@
 import { z, type ZodType } from 'zod';
+import { todayInAppTimezone } from './dates.js';
 import { MAX_PAGE_SIZE } from './pagination.js';
 
 /** Treats `?status=` (an empty string from a cleared filter) as "not provided". */
@@ -35,11 +36,17 @@ export const dateOnlySchema = z.iso.date('Use the YYYY-MM-DD format');
 export const startOfDay = (date: string) => new Date(`${date}T00:00:00.000Z`);
 export const endOfDay = (date: string) => new Date(`${date}T23:59:59.999Z`);
 
-/** A date sent in a request body: `YYYY-MM-DD` or a full ISO timestamp, never in the future. */
+/**
+ * A date sent in a request body: `YYYY-MM-DD` or a full ISO timestamp, never in the future.
+ * A calendar date is compared with today in APP_TIMEZONE (see lib/dates.ts), a timestamp with now.
+ */
 export const pastDateSchema = z
   .union([z.iso.date(), z.iso.datetime({ offset: true })], 'Enter a valid date')
+  .refine(
+    (value) => (value.length === 10 ? value <= todayInAppTimezone() : new Date(value).getTime() <= Date.now()),
+    'Date cannot be in the future',
+  )
   .transform((value) => new Date(value))
-  .refine((date) => date.getTime() <= Date.now(), 'Date cannot be in the future')
   .refine((date) => date.getUTCFullYear() >= 1950, 'Date is too far in the past');
 
 export const emailSchema = z
