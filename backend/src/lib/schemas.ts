@@ -6,6 +6,18 @@ export function optionalQuery<T extends ZodType>(schema: T) {
   return z.preprocess((value) => (typeof value === 'string' && value.trim() === '' ? undefined : value), schema.optional());
 }
 
+/**
+ * An optional body field that can be cleared: `""`, whitespace or `null` mean "no value".
+ * On create the field is simply left empty. On update the key stays in the parsed body with
+ * the value `undefined`, and Mongoose's `doc.set()` turns that into an `$unset`.
+ */
+export function clearableField<T extends ZodType>(schema: T) {
+  return z.preprocess(
+    (value) => (value === null || (typeof value === 'string' && value.trim() === '') ? undefined : value),
+    schema.optional(),
+  );
+}
+
 export const objectIdSchema = z.string().regex(/^[a-f\d]{24}$/i, 'Invalid id');
 
 export const idParamsSchema = z.object({ id: objectIdSchema });

@@ -22,6 +22,23 @@ export function doctorPayload(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** A valid create-patient body (without `doctorId`; add it for `POST /api/patients`). */
+export function patientPayload(overrides: Record<string, unknown> = {}) {
+  sequence += 1;
+  return {
+    name: `Test Patient ${sequence}`,
+    age: 42,
+    gender: 'female',
+    phone: '+1 555 030 0000',
+    email: `patient${sequence}@test.dev`,
+    condition: 'Asthma',
+    status: 'active',
+    admissionDate: '2026-02-01',
+    notes: 'Follow-up in two weeks',
+    ...overrides,
+  };
+}
+
 /** Inserts patients straight into the DB (for tests that only need them to exist). */
 export async function insertPatients(doctorId: string, count: number) {
   await PatientModel.insertMany(

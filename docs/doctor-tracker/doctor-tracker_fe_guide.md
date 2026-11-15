@@ -45,6 +45,21 @@ Next.js 16 App Router · TypeScript · Tailwind CSS 4 · `motion` (Framer Motion
 | Limits | `limit` max 50; empty params are ignored, so it's fine to send `?status=` |
 | Enum values | must match backend `constants/enums.ts` (mirror in `frontend/src/lib/constants.ts`) |
 
+## Backend patients contract (built in module 2.2)
+| Thing | Value |
+|---|---|
+| List | `GET /api/patients?page&limit&search&condition&status&gender&doctorId&admittedFrom&admittedTo&sort` → `{ data: Patient[], meta }` |
+| Doctor's patients | `GET /api/doctors/:id/patients?…` (same params minus `doctorId`) for the doctor profile table; 404 if the doctor is gone |
+| Patient shape | `{ id, name, age, gender, phone, email: string \| null, condition, status, admissionDate, notes: string \| null, doctorId, doctor: { id, name, specialization } \| null, createdAt, updatedAt }` (dates are ISO strings) |
+| Sort values | `-admissionDate` (default), `admissionDate`, `name`, `-name`, `-createdAt` |
+| Create | `POST /api/patients` with `doctorId` (patients page), or `POST /api/doctors/:id/patients` without it (doctor page); `admissionDate` as `YYYY-MM-DD` |
+| Edit | `PATCH /api/patients/:id`; changing `doctorId` reassigns. Send `email: ""` / `notes: ""` to clear them (an emptied input works as-is) |
+| Doctor select | async options from `GET /api/doctors/options?search=`; pre-fill edit forms from `patient.doctor` |
+| Unknown doctor | `404 { error: { code: 'DOCTOR_NOT_FOUND', details: { fields: ['doctorId'] } } }` → show on the doctor select (the doctor was deleted meanwhile) |
+| Validation errors | same as doctors: `details: [{ path, message }]`, one per field |
+| Delete | `DELETE /api/patients/:id` → 204 (hard delete; confirm first). Afterwards `router.refresh()` also updates the doctor's `patientCount` |
+| Enum values | `CONDITIONS`, `PATIENT_STATUSES` (`active`, `under_treatment`, `recovered`), `GENDERS` (`male`, `female`, `other`) |
+
 ## State (Redux Toolkit) _(planned)_
 - `ui` slice — sidebar collapsed, theme, open dialog descriptor
 - `auth` slice — current user (hydrated from the protected layout)

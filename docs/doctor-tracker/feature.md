@@ -1,6 +1,6 @@
 # Doctor Tracker — Feature Spec (living document)
 
-> Updated **only** when a module passes verification. Last updated: 2026-11-14 (planning complete, no modules verified yet).
+> Updated **only** when a module passes verification. Last updated: 2026-11-15 (module 2.2 verified).
 
 ## Overview
 Doctor Tracker is a secure admin portal for managing doctors and the patients assigned to them, with an analytics dashboard.
@@ -42,6 +42,7 @@ Doctor Tracker is a secure admin portal for managing doctors and the patients as
 | 1.1 Project scaffold | 2026-11-14 | Repo + Express 5 / TypeScript backend: validated env, pino logging, unified error shape, Zod `handler()` wrapper, helmet, CORS allowlist, 10kb body cap, rate limiting, Atlas connection, graceful shutdown, fail-fast on busy port. 6 automated tests + manual curl checks |
 | 1.2 Auth API | 2026-11-14 | Seeded admin, bcrypt login, 15-min JWT access token + rotating 7-day refresh token in httpOnly/Lax cookies, atomic rotation with reuse detection (10 s grace), logout revokes the session family, `requireAuth` / `requireRole`, login brute-force limit. 16 automated tests + manual flow on Atlas |
 | 2.1 Doctors API | 2026-11-14 | Doctor + Patient models with ESR indexes, doctor CRUD, indexed prefix search (`searchKey`), 5 filters + 8 sorts, page-number pagination (parallel find + count), patient counts in one `$group`, delete guard, hospitals + options lookups, `npm run db:explain`. 22 automated tests + 16 manual checks |
+| 2.2 Patients API | 2026-11-15 | Patient CRUD with doctor reassignment, indexed search, 6 filters + 5 sorts, pagination, each row's doctor via one `$in` query, nested `/api/doctors/:id/patients` (list + create, doctor lookup in parallel), clearable `email`/`notes`, 404 `DOCTOR_NOT_FOUND` for unknown body doctors, name-sort index. 26 automated tests (70 total) + 21 manual checks; every patient query uses an index |
 
 ## Current API surface
 Base URL (local): `http://localhost:8082`
@@ -61,6 +62,14 @@ Base URL (local): `http://localhost:8082`
 | POST | `/api/doctors` | admin | create → 201 · 409 on duplicate email |
 | PATCH | `/api/doctors/:id` | admin | partial update |
 | DELETE | `/api/doctors/:id` | admin | 204 · 409 `DOCTOR_HAS_PATIENTS` |
+| GET | `/api/doctors/:id/patients` | admin | the doctor's patients: same query as `/api/patients` (minus `doctorId`) · 404 unknown doctor |
+| POST | `/api/doctors/:id/patients` | admin | create a patient under this doctor → 201 · 404 unknown doctor |
+
+| GET | `/api/patients` | admin | list: `page, limit, search, condition, status, gender, doctorId, admittedFrom, admittedTo, sort` → `{ data, meta }`; rows include `doctor { id, name, specialization }` |
+| GET | `/api/patients/:id` | admin | patient + `doctor` |
+| POST | `/api/patients` | admin | create (`doctorId` in body) → 201 · 404 `DOCTOR_NOT_FOUND` |
+| PATCH | `/api/patients/:id` | admin | partial update; `doctorId` reassigns; `email`/`notes` = `""` or `null` clears |
+| DELETE | `/api/patients/:id` | admin | 204 · 404 |
 
 Seed the admin: `cd backend && npm run seed:admin` (uses `ADMIN_NAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`). Check index usage: `npm run db:explain`.
 

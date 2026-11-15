@@ -1,5 +1,15 @@
 # Module 2.2 — Patients API: Progress
 
-**Status:** not-started
-**Last updated:** 2026-11-14
-**Blockers:** depends on module 2.1
+**Status:** done (awaiting review)
+**Last updated:** 2026-11-15
+**Blockers:** none
+
+## Verification
+- `tsc --noEmit` clean · `tsc -p tsconfig.build.json` clean
+- `vitest run`: 70/70 (6 foundation + 16 auth + 22 doctors + 26 patients)
+- Manual curl (QA guide § 2.2): 21 checks passed against a **local MongoDB 8.2** (throwaway `mongod` from the cached test binary). This clone has no `backend/.env`, so Atlas wasn't used. Re-run § 2.2 on Atlas if you want the same check there
+- `npm run db:explain` on 402 patients / 14 doctors: all 15 queries use an index (no COLLSCAN). Equality + sort queries examine exactly as many keys as rows returned
+
+## Environment notes
+- C: now has ~2.75 GB free. Tests still run with `TEMP`/`TMP` on D: (`backend/.tmp`)
+- **Vitest needs an uppercase drive letter on Windows.** From `d:\…` (lowercase, e.g. Git Bash `/d/...` or VS Code's default terminal), every suite fails with "Vitest failed to find the runner" because Vitest loads twice under two path spellings. Run from `D:\project\doctor_tracker\backend` (e.g. `Set-Location D:\project\doctor_tracker\backend` in PowerShell first)

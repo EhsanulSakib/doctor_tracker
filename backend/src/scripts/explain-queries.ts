@@ -25,6 +25,13 @@ function describePlan(node: PlanNode | undefined): string {
 
 type Explainable = { explain: (verbosity: 'executionStats') => Promise<unknown> };
 
+await connectDb();
+await Promise.all([DoctorModel.init(), PatientModel.init()]);
+
+// A doctor who has patients makes the per-doctor plans meaningful; falls back to a dummy id on an empty DB.
+const samplePatient = await PatientModel.findOne().select('doctorId').lean();
+const doctorId = samplePatient?.doctorId.toString() ?? '000000000000000000000000';
+
 const queries: Array<[string, Explainable]> = [
   ['doctors: default list (newest first)', DoctorModel.find({}).sort({ createdAt: -1, _id: -1 }).limit(10)],
   ['doctors: search "aisha"', DoctorModel.find({ searchKey: searchKeyFilter('aisha') }).sort({ createdAt: -1, _id: -1 }).limit(10)],
@@ -33,11 +40,15 @@ const queries: Array<[string, Explainable]> = [
   ['doctors: hospital filter', DoctorModel.find({ hospital: 'City General' }).sort({ createdAt: -1, _id: -1 }).limit(10)],
   ['doctors: joined date range', DoctorModel.find({ joinedAt: { $gte: new Date('2024-01-01') } }).sort({ joinedAt: -1, _id: -1 }).limit(10)],
   ['doctors: sort by name', DoctorModel.find({}).sort({ name: 1, _id: 1 }).limit(10)],
-  ['patients: by doctor (delete guard / counts)', PatientModel.find({ doctorId: '000000000000000000000000' }).limit(1)],
+  ['patients: by doctor (delete guard / counts)', PatientModel.find({ doctorId }).limit(1)],
+  ['patients: default list (newest admission)', PatientModel.find({}).sort({ admissionDate: -1, _id: -1 }).limit(10)],
+  ['patients: search "maya"', PatientModel.find({ searchKey: searchKeyFilter('maya') }).sort({ admissionDate: -1, _id: -1 }).limit(10)],
+  ["patients: one doctor's list", PatientModel.find({ doctorId }).sort({ admissionDate: -1, _id: -1 }).limit(10)],
+  ['patients: condition filter', PatientModel.find({ condition: 'Asthma' }).sort({ admissionDate: -1, _id: -1 }).limit(10)],
+  ['patients: status filter', PatientModel.find({ status: 'under_treatment' }).sort({ admissionDate: -1, _id: -1 }).limit(10)],
+  ['patients: admission date range', PatientModel.find({ admissionDate: { $gte: new Date('2026-01-01') } }).sort({ admissionDate: -1, _id: -1 }).limit(10)],
+  ['patients: sort by name', PatientModel.find({}).sort({ name: 1, _id: 1 }).limit(10)],
 ];
-
-await connectDb();
-await Promise.all([DoctorModel.init(), PatientModel.init()]);
 
 for (const [label, query] of queries) {
   const result = (await query.explain('executionStats')) as ExplainResult;

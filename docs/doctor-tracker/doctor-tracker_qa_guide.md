@@ -16,6 +16,8 @@
 - Error shape: `{ "error": { "code": "...", "message": "...", "details": ... } }`
 - Automated tests: `cd backend && npm test` (first run downloads a MongoDB binary; set `MONGOMS_SYSTEM_BINARY` to reuse a local `mongod`)
 - On this machine (C: almost full), run tests with temp files on D:: `TEMP="$PWD/.tmp" TMP="$PWD/.tmp" npm test` from `backend/`
+- On Windows, run Vitest from an **uppercase** drive path (`D:\project\doctor_tracker\backend`). From `d:\…` every suite fails with "Vitest failed to find the runner". PowerShell: `Set-Location D:\project\doctor_tracker\backend; $env:TEMP="$PWD\.tmp"; $env:TMP=$env:TEMP; npm test`
+- In curl, add `-g` to URLs containing `[` `]` (e.g. `?status[$ne]=x`), otherwise curl treats them as a glob range
 
 ## Scenarios by module
 
@@ -79,8 +81,38 @@ Setup: log in first with a cookie jar (§ 1.2 step 3), then add `-b $J` to every
 
 **Result 2026-11-14:** all 16 passed against Atlas; `npm test` 44/44. Two demo doctors (Dr. Samir Haddad, Dr. Aisha Rahman) were left on Atlas; the 2.3 seed replaces them.
 
+### 2.2 Patients API
+Setup: log in with a cookie jar (§ 1.2 step 3) and create two doctors (§ 2.1 step 2); call their ids `$D1` and `$D2`. Add `-b $J` to every request.
+
+| # | Scenario | Command | Expected |
+|---|---|---|---|
+| 1 | No session | `curl -i $B/api/patients` | `401 UNAUTHENTICATED` |
+| 2 | Create | `curl -b $J -X POST $B/api/patients -H "Content-Type: application/json" -d '{"name":"Maya Chen","age":34,"gender":"female","phone":"+1 (555) 222-3333","email":"Maya.Chen@Mail.com","condition":"Asthma","admissionDate":"2026-03-15","notes":"Inhaler review","doctorId":"'$D1'"}'` | `201`, `status: "active"`, lowercased email, `doctor: { id, name, specialization }`, no `searchKey` |
+| 3 | Unknown doctor | same body with `"doctorId":"64b7f0000000000000000000"` | `404 DOCTOR_NOT_FOUND`, `details.fields: ["doctorId"]` |
+| 4 | Validation | `{"name":"X","age":200,"gender":"robot","phone":"abc","email":"no","condition":"Flu","admissionDate":"2999-01-01"}` | `400`, one message per field incl. `doctorId: Choose a doctor`, `age: Must be 120 or less` |
+| 5 | Create under a doctor | `POST $B/api/doctors/$D2/patients` with a patient body (no or another `doctorId`) | `201`, `doctorId` = `$D2`; missing `email`/`notes` come back as `null` |
+| 6 | Default list | `curl -b $J $B/api/patients` | newest admission first, each row has `doctor` |
+| 7 | Search | `?search=che` · `?search=1-555-444` · `?search=maya%20ch` | name-word prefix, phone digits (dashes ignored), multi-word |
+| 8 | Filters | `?condition=Diabetes` · `?status=recovered` · `?gender=female` · `?doctorId=$D2` · `?admittedFrom=2026-01-01&admittedTo=2026-12-31` · `?admittedTo=2025-08-01` (inclusive) · `?condition=&status=` (ignored) | only matching patients |
+| 9 | Pagination | `?limit=2&page=2&sort=name` | `meta.page 2`, correct slice |
+| 10 | Bad query | `?limit=500&gender=robot&sort=age` | `400` with a message for each of `limit`, `gender`, `sort` |
+| 11 | Doctor's patients | `$B/api/doctors/$D2/patients?sort=name` | only `$D2`'s patients |
+| 12 | Doctor's patients, unknown doctor | `$B/api/doctors/64b7f0000000000000000000/patients` | `404 NOT_FOUND` "Doctor not found" |
+| 13 | Get by id | `$B/api/patients/<id>` · unknown id · `not-an-id` | `200` with `doctor` · `404` · `400 Invalid id` |
+| 14 | Rename | `PATCH $B/api/patients/<id>` `{"name":"Maya Lin"}` | `200`; `?search=lin` finds her, `?search=chen` doesn't |
+| 15 | Reassign | `PATCH` `{"doctorId":"'$D2'"}` | `doctor` is now `$D2`; `GET /api/doctors` shows the counts moved |
+| 16 | Reassign to unknown doctor | `PATCH` `{"doctorId":"64b7f0000000000000000000"}` | `404 DOCTOR_NOT_FOUND`, patient unchanged |
+| 17 | Clear optional fields | `PATCH` `{"email":"","notes":null}` | `200`, `email: null`, `notes: null` |
+| 18 | Empty update | `PATCH` `{}` | `400 Provide at least one field to update` |
+| 19 | Doctor delete guard | `DELETE $B/api/doctors/$D2` while it has patients | `409 DOCTOR_HAS_PATIENTS`, `details.patientCount` |
+| 20 | Delete patient | `DELETE $B/api/patients/<id>`, then GET and DELETE again | `204`, then `404`, `404` |
+| 21 | Operator keys | `curl -g -b $J "$B/api/patients?doctorId[\$ne]=x&condition[\$in]=Asthma"` | `200`, filters ignored (all patients) |
+| 22 | Index usage | `cd backend && npm run db:explain` | every line starts with `✓ index`; the 8 `patients:` lines use `doctorId_…`, `admissionDate_…`, `searchKey_1`, `condition_…`, `status_…`, `name_1__id_1` |
+
+**Result 2026-11-15:** scenarios 1–21 passed against a local throwaway MongoDB 8.2 (this clone had no `backend/.env`, so not Atlas); `db:explain` on 402 patients / 14 doctors: every query uses an index. `npm test` 70/70.
+
 ## Edge-case checklist (global)
-- [x] Every protected endpoint returns 401 without a cookie (`/api/auth/me`, `/api/doctors/*`)
+- [x] Every protected endpoint returns 401 without a cookie (`/api/auth/me`, `/api/doctors/*`, `/api/patients/*`)
 - [x] Invalid ObjectId in a path → 400, not 500
 - [x] Unknown route → 404 with error shape
 - [x] Malformed JSON body → 400 with error shape

@@ -32,6 +32,9 @@ patientSchema.index({ searchKey: 1 });
 patientSchema.index({ admissionDate: -1, _id: -1 });
 patientSchema.index({ condition: 1, admissionDate: -1, _id: -1 });
 patientSchema.index({ status: 1, admissionDate: -1, _id: -1 });
+// Sort by name (walked backwards for "-name"). Gender and the rare "-createdAt" sort have no
+// dedicated index: gender has 3 values (low selectivity) and is applied on top of another index.
+patientSchema.index({ name: 1, _id: 1 });
 
 export type Patient = InferSchemaType<typeof patientSchema>;
 export type PatientDoc = Patient & { _id: Types.ObjectId };
