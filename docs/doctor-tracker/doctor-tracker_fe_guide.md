@@ -3,7 +3,7 @@
 > Updated after each module. Sections marked _(planned)_ are not built yet.
 
 ## Stack
-Next.js 16.4 App Router (Cache Components, Partial Prefetching, React Compiler) · TypeScript 5.9 · Tailwind CSS 4.3 · `motion` 14 (Framer Motion, `motion/react`) · Redux Toolkit 2.14 · React Hook Form + Zod (3.2) · Recharts (4.3). **No UI component library**: every component is hand-built (`src/components/ui`).
+Next.js 16.4 App Router (Cache Components, Partial Prefetching, React Compiler) · TypeScript 5.9 · Tailwind CSS 4.3 · `motion` 14 (Framer Motion, `motion/react`) · Redux Toolkit 2.14 · React Hook Form + Zod (3.2) · charts hand-built in SVG / HTML (4.3; no chart library). **No UI component library**: every component is hand-built (`src/components/ui`).
 
 ## Rules of the codebase (built in 3.1)
 - **Cache Components:** a component that calls `serverFetch` (it reads cookies) must sit inside `<Suspense>` or a route with `loading.tsx`, or `next build` fails. Don't `await` session/data at a layout's top level; push it into a component inside a boundary.
@@ -22,7 +22,7 @@ Next.js 16.4 App Router (Cache Components, Partial Prefetching, React Compiler) 
 |---|---|---|
 | `/` | redirect | → `/dashboard` (next.config) _(built in 3.2)_ |
 | `/login` | public, static | proxy sends signed-in visitors to `?next=` or `/dashboard` _(built in 3.2)_ |
-| `/dashboard` | protected | `?range=30d\|90d\|12m` (placeholder until 4.3) |
+| `/dashboard` | protected | `?range=30d\|90d\|12m` (anything else → 30d) _(built in 4.3)_ |
 | `/doctors` | protected | `?page&limit&search&specialization&hospital&status&joinedFrom&joinedTo&expMin&expMax&sort` |
 | `/doctors/[id]` | protected | doctor profile + their patients (same query params as patients) |
 | `/patients` | protected | `?page&limit&search&condition&status&gender&doctorId&admittedFrom&admittedTo&sort` |
@@ -112,6 +112,7 @@ Next.js 16.4 App Router (Cache Components, Partial Prefetching, React Compiler) 
 ## Design system — slate + indigo / violet (built in 3.1, redesigned 2026-11-15)
 - Tokens in `globals.css` (full table in module 3.1 `context.md`): `paper` / `paper-2` / `surface`, `ink` / `ink-muted` / `ink-subtle`, `line` / `line-strong`, `accent` (+ `-hover`, `-soft`, `-ink`), **`accent-fg`** (accent as text/icon — use it instead of `text-accent`), `accent-2` (violet, brand gradient), `danger` / `warning` / `success` / `info` (+ `-soft`), `overlay`. Dark theme via `data-theme="dark"` on `<html>`; `dark:` utilities follow it. All text pairs WCAG AA; `ink-subtle` is for placeholders/icons only.
 - Type: **Plus Jakarta Sans** (variable, `--font-jakarta`; replaced Inter on 2026-11-15 at the user's request) for UI, JetBrains Mono for codes/IDs, `tabular-nums` in tables/KPIs, clocks and counts; `text-title` (22px) for large headings (pages have no visible title), `text-label` (11px uppercase) for section labels; body 14px, inputs 16px on phones.
+- Chart tokens (4.3): `chart-accent` (#4f46e5 / dark #6366f1) for single-series marks; `chart-active` · `chart-treatment` · `chart-recovered` (#0284c7 · #d97706 · #059669, both themes) for patient status; `chart-ink` for text on the amber block.
 - Shape: `rounded-control` (8px), `rounded-panel` (12px); `shadow-card` on cards / tables / secondary buttons, `shadow-overlay` on dialogs, popovers, toasts. Panels use `<Card>` (`components/ui/card.tsx`). Badges are pills (`rounded-full`, soft fill + inset ring).
 - Layout: content is full width (no max-width cap) with 16px / 24px side padding; white sidebar and top bar on a slate-50 page.
 - Sizes: 36px controls with a mouse, 44px on touch (`pointer-coarse:`).
@@ -191,6 +192,19 @@ components/ui/filter-tokens.tsx     FilterTokens + FiltersButton (both lists)
 hooks/use-navigate-transition.ts    [isPending, navigate(href)]
 ```
 - **`DoctorSelect`**: `value: DoctorOption | null`, `onChange`, `clearable`, `placeholder`, plus the Field props (`id`, `labelId`, `aria-*`, `onBlur`). Works inside dialogs (focus stays in the input; Escape closes only its list).
+### Dashboard (built in 4.3)
+```
+app/(app)/dashboard/page.tsx        server: readEnum(range) → getDashboardStats → <DashboardView>
+app/(app)/dashboard/loading.tsx     <DashboardSkeleton> (same 9 boxes)
+features/dashboard/
+  types.ts · server.ts · format.ts  (axisLabel / bucketLabel / shortBucketLabel in UTC, niceTicks, percent)
+  components/dashboard-view.tsx     range row · KPI tiles · 12-col chart grid (fills the screen on lg)
+  components/parts.tsx              ChartCard · KpiTile · AnimatedNumber · RangeTabs (radio group)
+  components/patients-area-chart.tsx  stretchy SVG area + HTML axes / crosshair / tooltip + hidden table
+  components/status-split.tsx       tall segmented bar + legend
+  components/ranked-bars.tsx        one-hue ranked bars, value at the tip, share on hover
+```
+- **Charts:** colours only from `--chart-*` tokens (validated light + dark with the dataviz checker); text never wears a series colour; one chart = one short factual takeaway on the title line; every chart has a keyboard / screen-reader path (hidden table, focusable crosshair, visible values).
 - **List page recipe:** parse params on the server → fetch in parallel → client view gets data + params → `navigate(patch)` = `router.replace(href(params, patch), { scroll: false })` in `startTransition`; dim the table with `isPending`; redirect a page past the end to the last page.
 - **Never key a search box by its own text** (it remounts and loses focus as results land); key it by a counter bumped by outside "clear" actions.
 - **Screen-fitting tables:** the page root is `flex flex-col lg:min-h-0 lg:flex-1`, the table wrapper `flex min-h-0 flex-col`, and `<DataTable fill>`.

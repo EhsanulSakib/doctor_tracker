@@ -36,6 +36,14 @@
   --info-soft: #f0f9ff;
 
   --overlay: rgb(15 23 42 / 0.45);
+
+  /* Charts (validated with the dataviz palette checker: lightness band, CVD separation, 3:1 on the card surface).
+     One accent hue for single-series marks; patient status fills keep the badge hues (blue / amber / green). */
+  --chart-accent: #4f46e5;
+  --chart-active: #0284c7;
+  --chart-treatment: #d97706;
+  --chart-recovered: #059669;
+  --chart-ink: #0f172a; /* text printed on the amber fill, both themes (dark theme inherits it) */
   --elevation-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
   --elevation-overlay: 0 4px 12px -4px rgb(15 23 42 / 0.08), 0 16px 40px -8px rgb(15 23 42 / 0.18);
 }
@@ -71,6 +79,11 @@
   --info-soft: #0b2536;
 
   --overlay: rgb(2 6 23 / 0.7);
+
+  --chart-accent: #6366f1; /* indigo-500: #818cf8 is too light for the dark band */
+  --chart-active: #0284c7;
+  --chart-treatment: #d97706;
+  --chart-recovered: #059669;
   --elevation-card: 0 1px 2px rgb(0 0 0 / 0.3);
   --elevation-overlay: 0 4px 12px -4px rgb(0 0 0 / 0.4), 0 20px 48px -8px rgb(0 0 0 / 0.6);
 }
@@ -143,6 +156,11 @@
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
   --color-overlay: var(--overlay);
+  --color-chart-accent: var(--chart-accent);
+  --color-chart-active: var(--chart-active);
+  --color-chart-treatment: var(--chart-treatment);
+  --color-chart-recovered: var(--chart-recovered);
+  --color-chart-ink: var(--chart-ink);
 
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", monospace;

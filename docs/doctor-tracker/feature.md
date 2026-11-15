@@ -4,7 +4,7 @@
 
 ## Overview
 Doctor Tracker is a secure admin portal for managing doctors and the patients assigned to them, with an analytics dashboard.
-- **frontend/** — Next.js 16 (App Router, TypeScript, Tailwind CSS 4, Framer Motion via `motion`, Redux Toolkit, Recharts)
+- **frontend/** — Next.js 16 (App Router, TypeScript, Tailwind CSS 4, Framer Motion via `motion`, Redux Toolkit; charts hand-built in SVG / HTML)
 - **backend/** — Express 5 + Mongoose 9 (TypeScript), REST API
 - **Database** — MongoDB: local for development (Windows service or docker-compose), Atlas as the shared copy / production. `npm run db:sync` keeps them identical
 - **Hosting** — Vercel (frontend) · Render (backend) · MongoDB Atlas
@@ -28,7 +28,7 @@ Doctor Tracker is a secure admin portal for managing doctors and the patients as
 | 5 | Deletes | Patient hard delete with confirm (both pages). Doctor edit + delete; delete blocked (409) while patients exist |
 | 6 | Search | Lowercased indexed `searchKey` (name / email / phone), anchored prefix regex, 300 ms debounce |
 | 7 | Pagination | Numbered pages 10/20/50, server cap 50, `find` + `countDocuments` in parallel, `.lean()` + projections, compound indexes, state in URL |
-| 8 | Dashboard | KPIs with delta vs previous period, patients over time, top-10 patients per doctor, condition & status breakdowns, doctors by specialization; presets 30d / 90d / 12m; one endpoint, parallel aggregations, 60 s cache; Recharts |
+| 8 | Dashboard | KPIs with delta vs previous period, patients over time, top-10 patients per doctor, condition & status breakdowns, doctors by specialization; presets 30d / 90d / 12m; one endpoint, parallel aggregations, 60 s cache; charts hand-built (SVG + HTML, validated colour tokens) instead of Recharts (decided in 4.3: five simple charts, exact styling, server-rendered, no extra bundle) |
 | 9 | Data layer | Server Components fetch with Next `fetch` (cookies forwarded); URL is the source of truth for list queries; Redux Toolkit holds UI state (dialogs, current user, filter drafts, toasts); mutations via client fetch wrapper → `router.refresh()` |
 | 10 | UI | No component library — all components custom; Tailwind CSS; Framer Motion; **slate + indigo / violet** (Plus Jakarta Sans, 8/12px radii, soft card shadows, full-width layout; redesigned 2026-11-15 from the original teal "Clinical ledger" at the user's request); collapsible sidebar, light/dark; login with an optimised doctor photo; responsive & accessible |
 | 11 | API security | Zod on all inputs, helmet, CORS allowlist, rate limits, injection protection, body cap, central error handler `{ error: { code, message, details } }`, pino logging |
@@ -53,6 +53,7 @@ Doctor Tracker is a secure admin portal for managing doctors and the patients as
 | 3.2 Auth + app shell | 2026-11-15 | `proxy.ts` guards every page and refreshes sessions before rendering (rotated cookies forwarded to the browser and into the current render; prefetches and `/api` excluded; API outages don't sign users out); sign-in page (brand panel, RHF + Zod, error mapping, open-redirect-safe `next`); static shell with streamed account menu (fallback if the API is down); collapsible sidebar / tablet rail / phone drawer; theme + sidebar preferences applied before paint; error / 404 / loading screens. End-to-end auth 22/22, real-browser run 26/26. **Top bar redesign** (same day, user feedback): hidden page titles, Plus Jakarta Sans, clock + calendar + time zones, notification bell; 20/20 top bar checks |
 | 4.1 Doctors UI | 2026-11-15 | `/doctors`: search, inline + dialog filters (specialization, status, hospital, joined range, experience range), removable filter tokens, sortable columns, pagination + page size, create / edit (RHF + Zod, API field errors on fields), delete with the patients guard explained up front; `/doctors/[id]`: profile card, patient stat tiles, the doctor's patients with search / status / condition / sort / paging and add / edit / delete (shared `PatientFormDialog`); URL-as-state with transitions (old rows dimmed while loading); table fills the screen on laptops (inner scroll, sticky header); skeletons = the real table in loading mode; not-found page. Browser run 32/32 |
 | 4.2 Patients UI | 2026-11-15 | `/patients`: search, inline status / condition filters, Filters dialog (status, condition, gender, doctor, admission range, sort), removable tokens, sortable columns, pagination; create with a doctor picker, edit with reassignment ("Patient moved"), delete; `DoctorSelect` async combobox over `/api/doctors/options` (debounced, latest request wins, no stale picks); stale `?doctorId=` dropped by redirect; shared `useNavigateTransition` / `FilterTokens` for both lists. Browser run 17/17 |
+| 4.3 Dashboard UI | 2026-11-15 | `/dashboard`: range switch (30 days / 90 days / 12 months, `?range=`), "Updated" time, KPI tiles (doctors, patients, new patients with delta or "No earlier data to compare", patients per doctor; values count on range change), five hand-built charts (new patients area chart with crosshair + keyboard + hidden table, patient status tall segmented bar, ranked bars for top doctors / conditions / specializations), palette validated in both themes; fills a laptop screen exactly (no window or page scroll at 1280×720+); matching skeleton. Browser run 18/18. **Milestone 4 complete** |
 
 ## Current API surface
 Base URL (local): `http://localhost:8082`
@@ -97,7 +98,7 @@ Scripts (from `backend/`):
 
 The API's `APP_TIMEZONE` (default `Asia/Dhaka`) decides what "today" is for date fields and dashboard ranges.
 
-Frontend (from `frontend/`): `npm run dev` → http://localhost:3000 (start the API first; `BACKEND_URL` defaults to `http://localhost:8082`). Also `npm run typecheck`, `npm run lint`, `npm run build`. Pages: `/login`, and `/dashboard`, `/doctors`, `/patients` inside the app shell (placeholder content until milestone 4). Sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `backend/.env`.
+Frontend (from `frontend/`): `npm run dev` → http://localhost:3000 (start the API first; `BACKEND_URL` defaults to `http://localhost:8082`). Also `npm run typecheck`, `npm run lint`, `npm run build`. Pages: `/login`, and `/dashboard`, `/doctors`, `/patients` inside the app shell. Sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `backend/.env`.
 
 ## Known issues
 - **SRV lookups fail on this office network.** Node's resolver gets a malformed answer from the router for `mongodb+srv://` addresses (`querySrv EBADRESP`). Workaround in place: `SYNC_TARGET_URI` uses Atlas's standard `mongodb://host1,host2,host3` string. On Render, the SRV string works.

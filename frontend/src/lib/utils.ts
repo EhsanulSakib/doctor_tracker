@@ -10,6 +10,7 @@ const twMerge = extendTailwindMerge({
         "paper", "paper-2", "surface", "ink", "ink-muted", "ink-subtle", "line", "line-strong",
         "accent", "accent-hover", "accent-soft", "accent-ink", "accent-fg", "accent-2", "danger", "danger-hover", "danger-soft",
         "danger-ink", "warning", "warning-soft", "success", "success-soft", "info", "info-soft", "overlay",
+        "chart-accent", "chart-active", "chart-treatment", "chart-recovered", "chart-ink",
       ],
       text: ["label", "title"],
       radius: ["control", "panel"],

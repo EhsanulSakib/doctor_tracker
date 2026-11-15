@@ -14,3 +14,10 @@ Details: [module-1-doctors-ui/walkthrough.md](module-1-doctors-ui/walkthrough.md
 The same pattern again, with the shared parts pulled out (`useNavigateTransition`, `FilterTokens`, `FiltersButton`), plus `DoctorSelect`: an async combobox for the doctor filter and for assigning or moving patients.
 
 Details: [module-2-patients-ui/walkthrough.md](module-2-patients-ui/walkthrough.md).
+
+## 4.3 Dashboard UI (done 2026-11-15)
+One stats call, four KPI tiles and five hand-built charts. Each chart's form follows the data's job (area, tall segmented bar, ranked bars), and the colours were checked with a palette validator. The layout fills a laptop screen exactly.
+
+Details: [module-3-dashboard-ui/walkthrough.md](module-3-dashboard-ui/walkthrough.md).
+
+**Milestone 4 complete** (all three modules awaiting review).

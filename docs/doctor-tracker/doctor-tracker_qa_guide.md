@@ -278,6 +278,25 @@ Open **Patients**. `npm run seed` afterwards restores the demo data.
 
 **Result 2026-11-15 (headless Chrome, production build):** 17/17 automated (scenarios 1–10 and 12, plus skeleton geometry: header 44px / row 61px / same position, and layout at 1366×768). #11 covered by the doctors run (32/32). Regressions: layout 20/20, UI 26/26, top bar 20/20.
 
+### 4.3 Dashboard UI
+Open **Dashboard** (after `npm run seed`).
+
+| # | Scenario | Steps | Expected |
+|---|---|---|---|
+| 1 | Laptop fit | window at 1366×768 (and 1920×1080) | range switch, four tiles and five charts all on screen; no scrollbar anywhere; every list shows all its rows |
+| 2 | KPIs | compare with `GET /api/dashboard/stats?range=30d` (devtools → Network) | Doctors 15 (11 active), Patients 200, New patients = `kpis.newPatients.current` with ▲/▼ and the % vs the previous 30 days, Patients per doctor 13.3 |
+| 3 | Range | click 90 days, then press → | URL `?range=90d` then `?range=12m`; "New patients" changes (counts to the new value); the time chart switches to weeks, then months; 12 months says "No earlier data to compare" |
+| 4 | Bad range | open `/dashboard?range=7d` | the 30-day view, no error |
+| 5 | Time chart | hover across it; Tab to it and use ← → Home End | a crosshair snaps to each day / week / month with "N new patients" and the date |
+| 6 | Status | look at Patient status | three blocks (blue active, amber under treatment, green recovered) with their % on them; the legend counts add up to the total patients |
+| 7 | Rankings | hover a bar; click a doctor's name | the share of the whole appears; the name opens that doctor's profile |
+| 8 | Live numbers | add a patient (Patients page), come back | totals and the time chart include it ("Updated" shows the new time) |
+| 9 | Dark mode | switch the theme | bars and line in a brighter indigo, readable labels; status colours unchanged |
+| 10 | Phone | ~390px | tiles two by two, charts stacked, three x-axis labels, no sideways scroll |
+| 11 | Loading | "Slow 4G", open Dashboard from the sidebar | the skeleton's tiles and cards sit exactly where the real ones appear |
+
+**Result 2026-11-15 (headless Chrome, production build):** 18/18 automated (scenarios 1–7, 9–11; values compared with the API response, skeleton boxes identical). Regressions: doctors 32/32, patients 17/17, layout 18/18, UI 26/26, top bar 20/20.
+
 ## Edge-case checklist (global)
 - [x] Every protected endpoint returns 401 without a cookie (`/api/auth/me`, `/api/doctors/*`, `/api/patients/*`, `/api/dashboard/*`)
 - [x] Every protected page redirects to `/login?next=` without a session (proxy); `?next=` can't point off-site

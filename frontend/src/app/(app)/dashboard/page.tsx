@@ -1,19 +1,21 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
-import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
-import { DashboardIcon } from "@/components/ui/icons";
+import { DashboardView } from "@/features/dashboard/components/dashboard-view";
+import { getDashboardStats } from "@/features/dashboard/server";
+import { DASHBOARD_RANGES, DEFAULT_RANGE } from "@/features/dashboard/types";
+import { readEnum } from "@/lib/list-params";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
-// Placeholder: the analytics dashboard is built in module 4.3.
-export default function DashboardPage() {
+/** Server Component: `?range=30d|90d|12m` (anything else → 30 days), one stats request, streamed behind loading.tsx. */
+export default async function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
+  const range = readEnum(await searchParams, "range", DASHBOARD_RANGES) ?? DEFAULT_RANGE;
+  const stats = await getDashboardStats(range);
+
   return (
     <>
       <PageHeader title="Dashboard" />
-      <Card>
-        <EmptyState icon={<DashboardIcon size={20} />} title="Coming soon" />
-      </Card>
+      <DashboardView stats={stats} />
     </>
   );
 }
