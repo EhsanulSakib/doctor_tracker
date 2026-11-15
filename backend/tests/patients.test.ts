@@ -366,7 +366,7 @@ describe('PATCH /api/patients/:id', () => {
 });
 
 describe('DELETE /api/patients/:id', () => {
-  it('deletes the patient, then returns 404, and frees the doctor for deletion', async () => {
+  it('deletes the patient, then returns 404, and the doctor can still be deleted', async () => {
     const patient = await createPatient(doctor.id);
 
     expect((await api.remove(patient.id)).status).toBe(204);
@@ -374,7 +374,8 @@ describe('DELETE /api/patients/:id', () => {
     expect((await api.remove(patient.id)).status).toBe(404);
 
     const deleteDoctor = await request(app).delete(`/api/doctors/${doctor.id}`).set('Cookie', cookie);
-    expect(deleteDoctor.status).toBe(204);
+    expect(deleteDoctor.status).toBe(200);
+    expect(deleteDoctor.body.data).toEqual({ unassigned: 0 });
   });
 
   it('returns 400 for a malformed id', async () => {

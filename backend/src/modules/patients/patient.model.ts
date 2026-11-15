@@ -13,7 +13,8 @@ const patientSchema = new Schema(
     status: { type: String, enum: PATIENT_STATUSES, required: true, default: 'active' },
     admissionDate: { type: Date, required: true },
     notes: { type: String, trim: true, maxlength: 1000 },
-    doctorId: { type: Schema.Types.ObjectId, ref: 'Doctor', required: true },
+    // One doctor per patient. Null only after that doctor was deleted ("N/A" until reassigned).
+    doctorId: { type: Schema.Types.ObjectId, ref: 'Doctor', default: null },
     searchKey: { type: [String], select: false, default: [] },
   },
   { timestamps: true },

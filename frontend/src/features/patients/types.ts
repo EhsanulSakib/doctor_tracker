@@ -12,7 +12,9 @@ export type Patient = {
   status: PatientStatus;
   admissionDate: string;
   notes: string | null;
-  doctorId: string;
+  /** Null when the patient has no doctor (theirs was deleted). */
+  doctorId: string | null;
+  /** Null when the patient has no doctor: shown as "N/A". */
   doctor: { id: string; name: string; specialization: Specialization } | null;
   createdAt: string;
   updatedAt: string;

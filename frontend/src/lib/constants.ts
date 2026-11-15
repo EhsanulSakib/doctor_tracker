@@ -34,6 +34,32 @@ export const PATIENT_STATUSES = ["active", "under_treatment", "recovered"] as co
 
 export const GENDERS = ["male", "female", "other"] as const;
 
+/** Chamber days, in the order of the Bangladeshi working week (Saturday first). */
+export const WEEKDAYS = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"] as const;
+export type Weekday = (typeof WEEKDAYS)[number];
+export const WEEKDAY_LABELS: Record<Weekday, { short: string; long: string }> = {
+  sat: { short: "Sat", long: "Saturday" },
+  sun: { short: "Sun", long: "Sunday" },
+  mon: { short: "Mon", long: "Monday" },
+  tue: { short: "Tue", long: "Tuesday" },
+  wed: { short: "Wed", long: "Wednesday" },
+  thu: { short: "Thu", long: "Thursday" },
+  fri: { short: "Fri", long: "Friday" },
+};
+
+/** Doctors list filter: chamber on this day ("today" = today in the clinic). */
+export const CHAMBER_DAY_FILTERS = [...WEEKDAYS, "today"] as const;
+export type ChamberDayFilter = (typeof CHAMBER_DAY_FILTERS)[number];
+
+/** Part of the day the chamber starts in: before 12:00, 12:00–16:59, from 17:00. */
+export const CHAMBER_SHIFTS = ["morning", "afternoon", "evening"] as const;
+export type ChamberShift = (typeof CHAMBER_SHIFTS)[number];
+export const CHAMBER_SHIFT_LABELS: Record<ChamberShift, string> = { morning: "Morning (before 12 PM)", afternoon: "Afternoon (12–5 PM)", evening: "Evening (after 5 PM)" };
+
+export const ATTENDANCE_STATUSES = ["present", "absent", "leave"] as const;
+export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
+export const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = { present: "Present", absent: "Absent", leave: "On leave" };
+
 export type Specialization = (typeof SPECIALIZATIONS)[number];
 export type DoctorStatus = (typeof DOCTOR_STATUSES)[number];
 export type Condition = (typeof CONDITIONS)[number];

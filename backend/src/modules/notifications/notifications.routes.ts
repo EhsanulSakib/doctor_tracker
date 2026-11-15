@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { requireAuth, requireRole } from '../../middleware/auth.js';
+import { staffAccess } from '../../middleware/auth.js';
 import * as notifications from './notifications.controller.js';
 
 export const notificationsRouter = Router();
 
-notificationsRouter.use(requireAuth, requireRole('admin'));
+notificationsRouter.use(staffAccess);
 
 notificationsRouter.get('/', notifications.list);
 // Fixed path before "/:id" so it is not treated as an id.

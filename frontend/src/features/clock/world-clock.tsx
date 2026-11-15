@@ -167,7 +167,7 @@ function ZoneRow({ zone, now, prefs, mainOffset }: { zone: string; now: Date; pr
       <span className="shrink-0 text-ui font-semibold tabular-nums text-ink">{formatTime(now, zone)}</span>
       <div className="flex shrink-0 items-center">
         {isMain ? (
-          <span className="flex size-8 items-center justify-center text-accent-fg pointer-coarse:size-10" title="Main clock">
+          <span className="flex size-8 items-center justify-center text-accent-fg pointer-coarse:size-10" data-tooltip="Main clock">
             <StarIcon className="fill-current" />
           </span>
         ) : (

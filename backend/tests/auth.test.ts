@@ -29,6 +29,7 @@ describe('POST /api/auth/login', () => {
       name: ADMIN.name,
       email: ADMIN.email,
       role: 'admin',
+      avatarUrl: null,
     });
 
     const cookies = cookiesFrom(res);

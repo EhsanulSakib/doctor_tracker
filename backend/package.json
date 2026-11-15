@@ -15,6 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "seed": "tsx src/scripts/seed.ts",
+    "photos": "tsx src/scripts/upload-photos.ts",
+    "backfill": "tsx src/scripts/backfill-profiles.ts",
     "seed:admin": "tsx src/scripts/seed-admin.ts",
     "db:explain": "tsx src/scripts/explain-queries.ts",
     "db:sync": "tsx src/scripts/db-sync.ts"

@@ -39,7 +39,8 @@ type PatientRecord = {
   status: PatientStatus;
   admissionDate: Date;
   notes?: string | null;
-  doctorId: Types.ObjectId;
+  /** Null after the doctor was deleted. */
+  doctorId: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -52,8 +53,8 @@ export type PatientDto = Omit<PatientRecord, '_id' | 'email' | 'notes' | 'doctor
   id: string;
   email: string | null;
   notes: string | null;
-  doctorId: string;
-  /** `null` only if the doctor no longer exists (the doctor delete guard should prevent that). */
+  doctorId: string | null;
+  /** `null` when the patient has no doctor (theirs was deleted): shown as "N/A". */
   doctor: DoctorSummary | null;
 };
 
@@ -71,7 +72,7 @@ function toPatientDto(patient: PatientRecord, doctor: DoctorSummary | undefined)
     status: patient.status,
     admissionDate: patient.admissionDate,
     notes: patient.notes ?? null,
-    doctorId: patient.doctorId.toString(),
+    doctorId: patient.doctorId?.toString() ?? null,
     doctor: doctor ?? null,
     createdAt: patient.createdAt,
     updatedAt: patient.updatedAt,
@@ -87,7 +88,8 @@ const toDoctorSummary = (doctor: DoctorSummaryRecord): DoctorSummary => ({
 /** A `doctorId` in the request body points at a doctor that doesn't exist. */
 const doctorNotFound = () => new HttpError(404, 'DOCTOR_NOT_FOUND', 'Doctor not found', { fields: ['doctorId'] });
 
-async function findDoctorSummary(id: string | Types.ObjectId): Promise<DoctorSummary | undefined> {
+async function findDoctorSummary(id: string | Types.ObjectId | null): Promise<DoctorSummary | undefined> {
+  if (!id) return undefined;
   const doctor = await DoctorModel.findById(id).select('name specialization').lean<DoctorSummaryRecord>();
   return doctor ? toDoctorSummary(doctor) : undefined;
 }
@@ -96,8 +98,8 @@ async function findDoctorSummary(id: string | Types.ObjectId): Promise<DoctorSum
  * The doctors behind one page of patients, in a single `$in` query (what `populate` would do).
  * Done by hand so the result is typed and the patient keeps its `doctorId` even if a doctor is missing.
  */
-async function findDoctorSummaries(ids: Types.ObjectId[]): Promise<Map<string, DoctorSummary>> {
-  const uniqueIds = [...new Set(ids.map((id) => id.toString()))];
+async function findDoctorSummaries(ids: Array<Types.ObjectId | null>): Promise<Map<string, DoctorSummary>> {
+  const uniqueIds = [...new Set(ids.filter((id): id is Types.ObjectId => !!id).map((id) => id.toString()))];
   if (uniqueIds.length === 0) return new Map();
 
   const doctors = await DoctorModel.find({ _id: { $in: uniqueIds } })
@@ -149,7 +151,7 @@ export async function listPatients(q: ListPatientsQuery): Promise<Paginated<Pati
   const doctors = await findDoctorSummaries(patients.map((p) => p.doctorId));
 
   return paginate(
-    patients.map((p) => toPatientDto(p, doctors.get(p.doctorId.toString()))),
+    patients.map((p) => toPatientDto(p, p.doctorId ? doctors.get(p.doctorId.toString()) : undefined)),
     total,
     q,
   );
@@ -197,7 +199,7 @@ export async function updatePatient(id: string, input: UpdatePatientInput): Prom
 
   if (!patient) throw HttpError.notFound('Patient');
   if (input.doctorId && !newDoctor) throw doctorNotFound();
-  const previous = { status: patient.status, doctorId: patient.doctorId.toString() };
+  const previous = { status: patient.status, doctorId: patient.doctorId?.toString() ?? null };
 
   // Load + save (instead of findOneAndUpdate) so validation and the searchKey hook run.
   // A cleared optional field arrives as `undefined`, which save() turns into $unset.
@@ -205,7 +207,7 @@ export async function updatePatient(id: string, input: UpdatePatientInput): Prom
   await patient.save();
   clearDashboardCache();
 
-  const doctor = newDoctor ?? (await findDoctorSummary(patient.doctorId));
+  const doctor = newDoctor ?? (await findDoctorSummary(patient.doctorId ?? null));
 
   // Notifications for what actually changed (both when a patient recovers and moves in one edit).
   const events: NotificationInput[] = [];

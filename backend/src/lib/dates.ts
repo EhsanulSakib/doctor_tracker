@@ -24,3 +24,10 @@ export function todayInAppTimezone(now = new Date()): string {
 export function todayAsDateOnly(now = new Date()): Date {
   return new Date(`${todayInAppTimezone(now)}T00:00:00.000Z`);
 }
+
+const WEEKDAY_BY_UTC_DAY = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+
+/** The weekday (`sat`, `sun`…) of a `YYYY-MM-DD` calendar date. */
+export function weekdayOf(isoDate: string): (typeof WEEKDAY_BY_UTC_DAY)[number] {
+  return WEEKDAY_BY_UTC_DAY[new Date(`${isoDate}T00:00:00.000Z`).getUTCDay()]!;
+}

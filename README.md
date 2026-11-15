@@ -5,8 +5,8 @@ A secure admin portal for managing doctors and the patients assigned to them, wi
 | | |
 |---|---|
 | **Live demo** | _add the deployed URL here_ |
-| **Demo login** | the admin from `backend/.env` (see [Demo credentials](#demo-credentials)) |
-| **Stack** | Next.js 16 · React 19 · Tailwind CSS 4 · Redux Toolkit · Express 5 · MongoDB (Mongoose 9) · TypeScript |
+| **Demo login** | the **Demo login** button on the sign-in page (view-only), or the admin from `backend/.env` (see [Demo credentials](#demo-credentials)) |
+| **Stack** | Next.js 16 · React 19 · Tailwind CSS 4 · Redux Toolkit · Express 5 · MongoDB (Mongoose 9) · TypeScript · Cloudinary (photos) |
 
 <p align="center">
   <img src="docs/screenshots/desktop-dashboard.webp" alt="Dashboard: KPI tiles, new patients over time, patient status and ranked breakdowns" width="100%">
@@ -33,53 +33,74 @@ A secure admin portal for managing doctors and the patients assigned to them, wi
 ## Description
 
 Doctor Tracker gives a clinic's administrators one secure place to run their doctor roster and patient records. Admins sign in, then:
-- add doctors and search or filter them by specialization, hospital, status, joining date or experience;
-- open any doctor to see, add and remove that doctor's patients;
-- manage every patient from a dedicated page with search, date and condition filters, editing and reassignment to another doctor.
+- add doctors (with photo, degrees, chamber days and hours), and search or filter them by specialization, hospital, status, chamber day, joining date or experience;
+- open any doctor to see, add and remove that doctor's patients, and to follow the doctor's attendance over the last 7 to 90 days;
+- manage every patient from a dedicated page with search, date and condition filters, editing, reassignment to another doctor and a details page;
+- export doctors or patients to PDF or CSV.
 
-A dashboard turns the data into insight: totals, new patients over time against the previous period, the patient status split, and patients per doctor, condition and specialization. Every list is paginated and every search, filter and dashboard figure is served by an indexed MongoDB query. The interface is a responsive design that fits a laptop screen without scrolling and works the same on a phone.
+A dashboard turns the data into insight: totals, new patients over time against the previous period, the patient status split, recent admissions, patients by age, and patients per doctor. Every list is paginated and every search, filter and dashboard figure is served by an indexed MongoDB query. The interface is responsive: on a laptop the dashboard fits one screen, and on a phone every table becomes a list of cards.
 
 ## Features
 
 **Authentication**
 - Email and password sign-in for admins. Sessions use short-lived access tokens and rotating refresh tokens, both in `httpOnly` cookies.
+- **Demo login**: one click signs in a view-only demo admin. It can open every page, but the API rejects every add, edit and delete it tries (`403 DEMO_READ_ONLY`, shown as a toast).
 - Every page and every API route is protected. Signed-out visitors are sent to `/login` and returned to the page they asked for after signing in.
 - The Next.js proxy refreshes the session silently before rendering a page. The browser refreshes on a 401 (one refresh shared by parallel requests).
+- **Profile** (`/profile`): change your name, photo and password from one form with a single Save button. The sign-in email can't be changed.
 
 **Doctors** (`/doctors`, `/doctors/[id]`)
-- Create, edit and delete doctors: name, specialization, hospital, phone, email, status, years of experience and joining date.
+- Create and edit doctors. The spec's fields (name, specialization, hospital, phone, email) plus status, years of experience and joining date are required. Optional: a photo, degrees (title, institute, passing year), BMDC registration number, consultation fee, chamber room, chamber days and hours, and a short bio.
+- The list shows, per doctor:
+  - where they are today (in chamber now, due at a time, absent, off, on leave);
+  - their chamber schedule;
+  - their patient count;
+  - experience and joining date.
+- Clicking a row opens the doctor. The arrow on the left expands the row to show the doctor's newest patients, with a View and a Remove button on each.
 - Search by name, email or phone (prefix match on every word, indexed).
-- Filter by specialization, hospital, status, joining date range and experience range. Each active filter shows as a removable tag.
-- Sort by any column, paginate with 10, 20 or 50 rows, and keep everything in the URL, so filtered views are shareable and the back button works.
-- A doctor still responsible for patients can't be deleted; the dialog explains why and links to them.
-- The doctor profile shows contact details and patient counts by status. Below it, that doctor's patients appear with their own search, filters and pagination, and you can add, edit or delete patients there.
+- Filter by specialization, hospital, status, chamber day, chamber time (morning, afternoon, evening), joining date range and experience range. Each active filter shows as a removable tag.
+- Sort by name, experience or joining date and paginate. The whole list state lives in the URL, so filtered views are shareable and the back button works.
+- **Export** to PDF or CSV: the filtered doctors, all doctors, the current page, or a custom set (filters and columns), with a live preview of the file.
+- **Delete** asks you to type the doctor's name. The delete is permanent; the doctor's patients stay and show **N/A** as their doctor until they are assigned to another one. Each patient has exactly one doctor.
+- The doctor page has a header (photo with a live status dot, contact details with copy buttons, chamber, fee) and three tabs:
+  - **Patients**: the doctor's patients with status tabs, search, a condition filter and pagination. You can add, edit, view and delete them here.
+  - **Attendance**: present, absent and leave totals, the attendance rate and the current streak for the last 7, 30, 60 or 90 days. It shows a GitHub-style calendar (a week strip for 7 days) and a daily log.
+  - **Details**: degrees with institute and passing year, registration, chamber, fee and bio.
 
-**Patients** (`/patients`)
-- List, create, edit and delete patients.
+**Patients** (`/patients`, `/patients/[id]`)
+- List, create, edit and delete patients. Each value has its own column (patient, age, gender, phone, condition, status, doctor, admitted).
 - Move a patient to another doctor using a searchable doctor picker.
 - Search by name, phone or email.
 - Filter by status, condition, gender, doctor and admission date range, with sorting and pagination.
+- **Export** to PDF or CSV, with the same four options and preview as doctors.
+- A **details page** per patient: their record, notes, and their doctor with today's availability.
 
 **Dashboard** (`/dashboard`)
-- KPI tiles: total doctors (active), total patients (under care), new patients for the selected range with the change against the previous period, and patients per doctor.
+- KPI tiles:
+  - total doctors (active and on leave);
+  - total patients (under care);
+  - new patients for the selected range, compared with the previous period;
+  - patients under treatment.
 - Ranges of 30 days, 90 days and 12 months. Buckets are per day, week or month, and empty buckets are filled with zero.
-- Charts (hand-built SVG/HTML, colours validated for contrast and colour blindness):
+- Charts (hand-built SVG/HTML, colours validated for contrast and colour blindness, animated):
   - new patients over time, with hover and keyboard read-out;
-  - patient status split;
-  - top doctors by patients;
-  - patients by condition;
-  - doctors by specialization.
+  - patient status as a donut;
+  - patients by age group, with the gender split;
+  - **patients per doctor**;
+  - recent admissions.
 - The whole dashboard comes from one API call. All aggregations run on indexes, and the result is cached for 60 seconds and cleared on any write.
 
 **Interface**
 - A collapsible sidebar on desktop (with your profile and sign-out at the bottom), an icon rail on tablets and a drawer on phones. The breadcrumb in the top bar shows where you are.
-- Custom date and range pickers (day, month and year views, full keyboard support), animated dropdowns, and dashboard entrance motion. All of it respects "reduce motion".
+- Every table becomes a list of cards on small screens. Pages scroll as a whole; tables never get a scrollbar of their own.
+- One animated tooltip style everywhere: icon buttons, calendar days, statuses and the collapsed sidebar.
+- Custom date and range pickers (day, month and year views, full keyboard support), animated dropdowns, tabs and dashboard entrance motion. All of it respects "reduce motion".
 - Top bar:
   - a Bangladesh clock with a calendar and user-added time zones;
   - a notification bell fed by real events (new doctor, doctor on leave with patients assigned, new patient, recovered, reassigned);
   - the light/dark theme switch.
 - No layout shift: loading skeletons have the same size as the content they stand in for.
-- Accessible: keyboard navigation everywhere, visible focus, ARIA patterns for the combobox, dialog, listbox and radio group, and WCAG AA contrast in both themes.
+- Accessible: keyboard navigation everywhere, visible focus, ARIA patterns for the combobox, dialog, listbox, tabs and radio group, and WCAG AA contrast in both themes.
 
 ## Setup Guide
 
@@ -121,10 +142,12 @@ Edit `backend/.env`:
 - `MONGODB_URI`: keep the Docker default, or paste your Atlas string (add the database name, e.g. `.../doctor_tracker`).
 - `JWT_ACCESS_SECRET`: at least 32 random characters. Generate one with `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`.
 - `ADMIN_EMAIL` / `ADMIN_PASSWORD`: the admin account the seed creates.
+- Optional, for photo uploads: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` (Cloudinary console → Settings → API Keys). Without them everything works except uploading photos.
 
 ```bash
 npm install
-npm run seed                  # admin + 15 doctors + 200 patients + 25 notifications (demo data)
+npm run seed                  # admin + 15 doctors (degrees, chambers, 18 weeks of attendance) + 200 patients + 30 notifications
+npm run photos                # optional, needs Cloudinary: doctor portraits and the admin photo
 npm run dev                   # http://localhost:8082 (check: http://localhost:8082/api/health)
 ```
 
@@ -157,6 +180,9 @@ Both apps ship an `.env.example` with every variable documented: [`backend/.env.
 | `TRUST_PROXY` | `0` | reverse proxies in front of the API (set `1` on Render/Railway) so rate limits see the real IP |
 | `APP_TIMEZONE` | `Asia/Dhaka` | decides "today" for date fields and dashboard ranges |
 | `ADMIN_NAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD` | `Clinic Admin` / `admin@doctortracker.dev` / — | the account created by `npm run seed` / `npm run seed:admin` |
+| `DEMO_NAME` / `DEMO_EMAIL` | `Demo Admin` / `demo@doctortracker.dev` | the view-only account behind the **Demo login** button (created on first use) |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | — (optional) | photo uploads; unset = uploads disabled |
+| `CLOUDINARY_FOLDER` | `doctor-tracker` | Cloudinary folder for the photos |
 | `LOG_LEVEL` | `info` | pino log level |
 | `SYNC_TARGET_URI` | — (optional) | second database kept identical by `npm run db:sync` |
 
@@ -172,10 +198,12 @@ The API validates its environment with Zod at start-up and exits with a readable
 |---|---|---|
 | backend | `npm run dev` | API with reload on change (tsx watch) |
 | backend | `npm run build` · `npm start` | compile to `dist/` · run the compiled server |
-| backend | `npm test` | 98 integration tests (Vitest + Supertest + in-memory MongoDB) |
+| backend | `npm test` | 123 integration tests (Vitest + Supertest + in-memory MongoDB) |
 | backend | `npm run typecheck` | TypeScript, no output |
 | backend | `npm run seed` | demo data (replaces doctors, patients and notifications; keeps users). Refuses to run with `NODE_ENV=production` unless `--force` |
 | backend | `npm run seed:admin` | creates or updates only the admin account (safe in production) |
+| backend | `npm run photos` | uploads doctor portraits (stock photos, matched by gender) and the admin photo to Cloudinary and saves their URLs; re-runnable |
+| backend | `npm run backfill` | fills in missing profile details and attendance history for the seeded doctors without replacing any data |
 | backend | `npm run db:explain` | prints the query plan and index used by every list, search, filter, dashboard and notification query |
 | backend | `npm run db:sync -- --yes` | copies the database to `SYNC_TARGET_URI` (e.g. local → Atlas) |
 | frontend | `npm run dev` | Next.js dev server |
@@ -193,9 +221,10 @@ The API validates its environment with Zod at start-up and exits with a readable
 
 ### Demo credentials
 
-`npm run seed` creates one admin from `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `backend/.env`. With the values in `.env.example` that is **`admin@doctortracker.dev` / `ChangeMe!2026`**. Change the password for any shared or deployed environment; credentials for the live demo are provided with the submission.
+- **Demo login** (no password): the button on the sign-in page. View-only: every write is refused by the API.
+- **Admin**: `npm run seed` creates one admin from `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `backend/.env`. With the values in `.env.example` that is **`admin@doctortracker.dev` / `ChangeMe!2026`**. Change the password for any shared or deployed environment; credentials for the live demo are provided with the submission.
 
-The demo data is Bangladesh-based: names, fictional hospitals in Dhaka, Chattogram, Sylhet, Rajshahi and Khulna, `+880` phone numbers, and dates in Asia/Dhaka time.
+The demo data is Bangladesh-based: local names, government hospitals in Dhaka, Chattogram, Sylhet, Rajshahi and Khulna, degrees from Bangladeshi institutions (BCPS, NICVD, NINS, NITOR, medical colleges), `+880` phone numbers, and dates in Asia/Dhaka time. Doctor emails use reserved `example.org` domains.
 
 ---
 
@@ -219,11 +248,12 @@ flowchart LR
     L["rate limits"]
     A["requireAuth (JWT)"]
     V["Zod validation"]
-    MOD["modules<br/>auth · doctors · patients<br/>dashboard · notifications"]
+    MOD["modules<br/>auth · doctors · patients · attendance<br/>dashboard · notifications · uploads"]
     H["error handler<br/>{ error: { code, message, details } }"]
   end
 
-  DB[("MongoDB<br/>users · refreshtokens · doctors<br/>patients · notifications")]
+  DB[("MongoDB<br/>users · refreshtokens · doctors · patients<br/>attendances · notifications")]
+  CL[("Cloudinary<br/>photos")]
 
   B -- "page request" --> P --> S
   S -- "GET /api/... + access cookie" --> M
@@ -231,6 +261,7 @@ flowchart LR
   C -. "router.refresh() after a write" .-> S
   M --> L --> A --> V --> MOD --> DB
   MOD --> H
+  B -- "signed direct upload" --> CL
 ```
 
 - **Pages read on the server.** A page's Server Component parses its URL (filters, sort, page), calls the API directly with the user's access-token cookie, and streams HTML. The browser never fetches list data itself.
@@ -242,7 +273,9 @@ flowchart LR
   - Zod validation of params, query and body;
   - a feature module (route → controller → service → Mongoose model);
   - one error handler with a single error shape.
-- **MongoDB** holds five collections. Every query a screen makes is backed by an index (see [Performance](#performance-and-query-optimization)).
+- **Authorization:** every resource route sits behind `requireAuth` and a role check. The read-only `demo` role passes reads, and every write it sends is rejected by one middleware (`denyDemoWrites`).
+- **Photos never pass through the API.** The browser asks `POST /api/uploads/signature` for a short-lived signature, uploads the file straight to Cloudinary, and saves the returned URL on the doctor or the profile. The API only accepts URLs from its own Cloudinary account.
+- **MongoDB** holds six collections. Every query a screen makes is backed by an index (see [Performance](#performance-and-query-optimization)).
 
 ### Authentication flow
 
@@ -275,7 +308,8 @@ sequenceDiagram
 ```mermaid
 erDiagram
   USER ||--o{ REFRESH_TOKEN : "has sessions"
-  DOCTOR ||--o{ PATIENT : "is assigned"
+  DOCTOR |o--o{ PATIENT : "is assigned (one doctor per patient)"
+  DOCTOR ||--o{ ATTENDANCE : "marked per day"
   DOCTOR ||--o{ NOTIFICATION : "subject of"
   PATIENT ||--o{ NOTIFICATION : "subject of"
 
@@ -283,7 +317,8 @@ erDiagram
     string name
     string email UK
     string passwordHash
-    string role "admin"
+    string role "admin · demo (read-only)"
+    string avatarUrl "Cloudinary"
   }
   REFRESH_TOKEN {
     ObjectId userId
@@ -302,7 +337,21 @@ erDiagram
     string status "active · on_leave · inactive"
     int yearsOfExperience
     date joinedAt
+    string photoUrl "Cloudinary, optional"
+    array degrees "title · institute · year"
+    string registrationNo "BMDC"
+    int consultationFee "BDT"
+    string chamberRoom
+    array chamberDays "sat … fri"
+    string chamberStart "HH:MM"
+    string chamberEnd "HH:MM"
+    string bio
     array searchKey "indexed prefix search"
+  }
+  ATTENDANCE {
+    ObjectId doctorId
+    date date "one per doctor per day"
+    string status "present · absent · leave"
   }
   PATIENT {
     string name
@@ -314,7 +363,7 @@ erDiagram
     string status "active · under_treatment · recovered"
     date admissionDate
     string notes
-    ObjectId doctorId
+    ObjectId doctorId "null after the doctor is deleted (N/A)"
     array searchKey
   }
   NOTIFICATION {
@@ -338,18 +387,18 @@ doctor-tracker/
 │   │   ├── config/              env (Zod-validated), database
 │   │   ├── middleware/          auth, rate limits, not-found, error handler
 │   │   ├── lib/                 validation helpers, pagination, search keys, dates, TTL cache
-│   │   ├── modules/             auth · doctors · patients · dashboard · notifications
+│   │   ├── modules/             auth · doctors · patients · attendance · dashboard · notifications · uploads
 │   │   │                        (each: model, schema, service, controller, routes)
-│   │   └── scripts/             seed, seed-admin, explain-queries, db-sync
+│   │   └── scripts/             seed, seed-admin, photos, backfill, explain-queries, db-sync
 │   ├── tests/                   Vitest + Supertest integration tests
 │   └── .env.example
 ├── frontend/                    Next.js 16 App Router
 │   ├── src/
 │   │   ├── proxy.ts             route protection + silent session refresh
-│   │   ├── app/                 (auth)/login · (app)/dashboard, doctors, doctors/[id], patients
-│   │   ├── features/            auth · doctors · patients · dashboard · notifications · clock
+│   │   ├── app/                 (auth)/login · (app)/dashboard, doctors, doctors/[id], patients, patients/[id], profile
+│   │   ├── features/            auth · doctors · patients · profile · dashboard · notifications · clock
 │   │   │                        (types, server reads, client writes, schemas, components)
-│   │   ├── components/ui/       hand-built primitives: Button, Select, Dialog, DataTable, Pagination…
+│   │   ├── components/ui/       hand-built primitives: Button, Select, Dialog, DataTable, Tooltip, ExportDialog…
 │   │   ├── components/layout/   sidebar, top bar, mobile drawer, account menu
 │   │   ├── hooks/ · lib/        fetch layer, URL params, formatting · Redux store (UI state)
 │   │   └── store/
@@ -402,9 +451,11 @@ doctor-tracker/
 ### Other decisions, briefly
 
 - **No component library.** The primitives (Select, Dialog/bottom sheet, Popover, DataTable with phone cards, Pagination, async combobox, calendar with date and range pickers, suggestion field) are hand-built on WAI-ARIA patterns, styled with Tailwind tokens, and animated with `motion`. The tokens come in three layers (primitive → semantic → component). Tailwind's own palette is switched off, so components can only use them. See [docs/design-system.md](docs/design-system.md).
-- **Charts are hand-built (SVG + HTML) instead of Recharts.** There are five simple charts. Building them gives exact styling in both themes, server rendering and real-component tooltips with no chart bundle. Colours were checked with a palette validator for lightness, colour-blind separation and 3:1 contrast.
+- **Charts are hand-built (SVG + HTML) instead of Recharts.** The charts are simple (an area chart, a donut, columns and bars). Building them gives exact styling in both themes, server rendering and real-component tooltips with no chart bundle. Colours were checked with a palette validator for lightness, colour-blind separation and 3:1 contrast.
+- **Exports are built in the browser.** CSV is generated directly (with a byte-order mark so Excel reads UTF-8). PDF uses jsPDF, loaded only when someone exports, so it never weighs on page loads. Exports of "all" or "filtered" rows fetch every page from the same list endpoints the tables use.
+- **Read-only demo as a role, not a separate app.** The demo account is a normal user with the `demo` role. Authorization stays in one place on the server: reads are allowed and writes are rejected by middleware. The UI simply shows the API's answer as a toast.
 - **Search uses prefix keys instead of `$text` or unanchored regexes.** Each document stores lower-cased name words, the email and the phone digits in an indexed `searchKey` array. A search becomes anchored regexes (`$all: [/^nus/, /^jah/]`) answered by an index range scan.
-- **Delete guard instead of cascade.** Deleting a doctor who still has patients returns `409 DOCTOR_HAS_PATIENTS`, so patient records are never removed by accident.
+- **Deleting a doctor never deletes patients.** The spec models one doctor per patient. Deleting a doctor (confirmed by typing their name) removes the doctor, their attendance and their notifications, and sets their patients' doctor to `null`, shown as "N/A" until someone reassigns them.
 - **Notifications come from domain events.** Doctor and patient writes record events (new doctor, doctor on leave with patients still assigned, new patient, recovered, reassigned). Notifications expire after 30 days through a TTL index.
 
 ---
@@ -450,6 +501,7 @@ All screenshots are from the production build with the seeded demo data, taken a
 | doctors | `{ email: 1 }` unique · `{ searchKey: 1 }` · `{ createdAt: -1, _id: -1 }` · `{ specialization: 1, createdAt: -1, _id: -1 }` · `{ status: 1, createdAt: -1, _id: -1 }` · `{ hospital: 1, createdAt: -1, _id: -1 }` · `{ joinedAt: -1, _id: -1 }` · `{ name: 1, _id: 1 }` | duplicate check, search, default list, each filter, joined-date range, sort by name, dashboard counts |
 | patients | `{ doctorId: 1, admissionDate: -1, _id: -1 }` · `{ searchKey: 1 }` · `{ admissionDate: -1, _id: -1 }` · `{ condition: 1, admissionDate: -1, _id: -1 }` · `{ status: 1, admissionDate: -1, _id: -1 }` · `{ name: 1, _id: 1 }` | a doctor's patients + delete guard + per-doctor counts, search, default list + date range + time series, each filter, sort by name |
 | notifications | `{ createdAt: -1, _id: -1 }` · `{ readAt: 1, createdAt: -1 }` · `{ subject.id: 1 }` · TTL `{ createdAt: 1 }` (30 days) | the bell list, unread count, clean-up when a doctor or patient is deleted, expiry |
+| attendances | `{ doctorId: 1, date: -1 }` unique · `{ date: 1, doctorId: 1 }` | one record per doctor per day, a doctor's history, today's attendance for a page of doctors |
 | refreshtokens | `{ tokenHash: 1 }` unique · TTL `{ expiresAt: 1 }` | refresh lookup, automatic expiry |
 
 ### Verified with `explain()`
@@ -470,7 +522,7 @@ All screenshots are from the production build with the seeded demo data, taken a
 ### Query patterns
 
 - **Pagination:** the page query and `countDocuments` run in parallel with the same filter. The sort always ends with `_id`, so rows never repeat or vanish between pages, and `limit` is capped at 50.
-- **No N+1:** a page of patients loads its doctors with one `$in` query; doctor patient counts come from one grouped aggregation per page.
+- **No N+1:** a page of patients loads its doctors with one `$in` query. For a page of doctors, patient counts by status come from one grouped aggregation and today's attendance from one `$in` query.
 - **Dashboard:** 10 aggregations run in parallel, each on an index (most covered, reading no documents at all). Time buckets are aligned to day, week or month in the clinic's time zone and zero-filled. The result is cached for 60 seconds and cleared by any doctor or patient write.
 - **Lean reads and projections:** list queries use `.lean()` and select only the fields the response needs.
 
@@ -478,7 +530,8 @@ All screenshots are from the production build with the seeded demo data, taken a
 
 - **Prerendered shell:** with Cache Components and Partial Prerendering, the shell is static and instant on navigation, and data streams in behind `Suspense`. The React Compiler removes the need for manual memoisation.
 - **Stable layout:** transitions keep the current content on screen while new data loads. Skeletons match the real geometry, and the measured layout shift is 0 (≤ 0.0006 on a first table load at 1440 px and wider).
-- **Lean assets:** fonts are self-hosted by `next/font`, the sign-in photo is served as AVIF/WebP (~36 KB on desktop), and there are no UI or chart libraries in the bundle.
+- **Lean assets:** fonts are self-hosted by `next/font`; the sign-in photo and the Cloudinary photos are served by `next/image` as AVIF/WebP at the displayed size. There are no UI or chart libraries in the bundle; the PDF library loads only on export.
+- **Lazy row details:** an expanded doctor row loads its patients only when opened, and keeps them while the page is open.
 
 ---
 
@@ -486,7 +539,8 @@ All screenshots are from the production build with the seeded demo data, taken a
 
 - Passwords are hashed with bcrypt. Refresh tokens are stored only as SHA-256 hashes, rotated on every use, and reuse revokes the whole session family.
 - Cookies are `httpOnly`, `SameSite=Lax` and `Secure` in production. Same-origin `/api` keeps them first-party.
-- Every route checks authentication on the server: `proxy.ts` guards pages and `requireAuth` + `requireRole('admin')` guard the API. Unsafe `?next=` redirects are rejected (no open redirects).
+- Every route checks authentication on the server: `proxy.ts` guards pages, and `requireAuth` with a role check guards the API. The demo role can read but every write it sends returns `403 DEMO_READ_ONLY`. Unsafe `?next=` redirects are rejected (no open redirects).
+- Photo uploads are signed by the API (the Cloudinary secret never reaches the browser), and stored photo URLs must point to the project's own Cloudinary account.
 - Rate limits cover sign-in, refresh and the whole API. `TRUST_PROXY` makes them see the real client IP behind a proxy.
 - Every input is validated with Zod (params, query, body), and invalid ids return 400 rather than 500. `?status[$ne]=x`-style operator injection is ignored (Express "simple" query parser), and operator keys in bodies are rejected.
 - Helmet security headers on the API; security headers on the Next.js app. JSON bodies are capped at 10 kB.
@@ -496,7 +550,7 @@ All screenshots are from the production build with the seeded demo data, taken a
 
 ## API reference
 
-All endpoints are under `/api`, return JSON, and (except health and auth) require an admin session. Lists return `{ data, meta: { page, limit, total, totalPages } }`; single resources return `{ data }`.
+All endpoints are under `/api`, return JSON, and (except health and sign-in) require a session. The demo account can call every `GET`; its writes return `403 DEMO_READ_ONLY`. Lists return `{ data, meta: { page, limit, total, totalPages } }`; single resources return `{ data }`.
 
 | Method | Path | Notes |
 |---|---|---|
@@ -504,12 +558,17 @@ All endpoints are under `/api`, return JSON, and (except health and auth) requir
 | POST | `/auth/login` | `{ email, password }` → sets `dt_access` + `dt_refresh` cookies |
 | POST | `/auth/refresh` | rotates both cookies |
 | POST | `/auth/logout` | revokes the session, clears cookies |
+| POST | `/auth/demo` | signs in the view-only demo account (created on first use) |
 | GET | `/auth/me` | the signed-in user |
-| GET | `/doctors` | `page, limit, search, specialization, hospital, status, joinedFrom, joinedTo, expMin, expMax, sort` |
+| PATCH | `/auth/me` | `{ name?, avatarUrl? }`; the email can't be changed |
+| POST | `/auth/me/password` | `{ currentPassword, newPassword }`; signs out other sessions |
+| POST | `/uploads/signature` | `{ kind: "avatar" \| "doctor" }` → a one-time Cloudinary upload signature |
+| GET | `/doctors` | `page, limit, search, specialization, hospital, status, day, shift, joinedFrom, joinedTo, expMin, expMax, sort` |
 | GET | `/doctors/hospitals` · `/doctors/options?search=` | distinct hospitals · up to 20 `{ id, name, specialization }` for pickers |
-| GET · PATCH · DELETE | `/doctors/:id` | includes `patientCount` · partial update · `409 DOCTOR_HAS_PATIENTS` while patients are assigned |
+| GET · PATCH · DELETE | `/doctors/:id` | includes `patientCount`, `patientStats`, `today` · partial update · permanent delete → `{ unassigned }` (patients left without a doctor) |
 | POST | `/doctors` | create · `409` duplicate email |
 | GET · POST | `/doctors/:id/patients` | that doctor's patients (same filters as `/patients`) · add a patient under the doctor |
+| GET · PUT | `/doctors/:id/attendance` | `?days=7…182` → records + totals · `{ date?, status }` marks a day (`null` clears it) |
 | GET | `/patients` | `page, limit, search, condition, status, gender, doctorId, admittedFrom, admittedTo, sort` |
 | GET · PATCH · DELETE | `/patients/:id` | with its doctor · partial update (`doctorId` reassigns) · delete |
 | POST | `/patients` | create with `doctorId` · `404 DOCTOR_NOT_FOUND` |
@@ -525,10 +584,10 @@ Validation errors return `400 { error: { code: "VALIDATION_ERROR", details: [{ p
 
 | Layer | How | Result |
 |---|---|---|
-| API | `cd backend && npm test`: Vitest + Supertest against an in-memory MongoDB. Covers auth (rotation, reuse, expiry), validation, every endpoint, filters, pagination, the delete guard, dashboard maths and notifications | **98 tests, all passing** |
+| API | `cd backend && npm test`: Vitest + Supertest against an in-memory MongoDB. Covers auth (rotation, reuse, expiry), the read-only demo role, profile and password changes, upload signatures and photo URLs, validation, every endpoint, filters (including the chamber schedule), pagination, deleting a doctor (patients left unassigned), attendance, dashboard maths and notifications | **123 tests, all passing** |
 | Queries | `npm run db:explain`: the plan of every list, search, filter, dashboard and notification query | **25/25 use an index** |
 | Frontend | `npm run typecheck`, `npm run lint`, `npm run build` | clean |
-| End to end | real-browser runs against the production build (headless Chrome over the DevTools protocol), plus manual scenarios in the [QA guide](docs/doctor-tracker/doctor-tracker_qa_guide.md) | auth 22/22 · shell 26/26 · top bar 20/20 · doctors 32/32 · patients 17/17 · dashboard 18/18 · layout 18/18 |
+| End to end | real-browser runs against the production build (headless Chrome over the DevTools protocol), plus manual scenarios in the [QA guide](docs/doctor-tracker/doctor-tracker_qa_guide.md) | results recorded per module in the QA guide |
 
 The browser runs check behaviour that unit tests can't:
 - values on screen against the API response;
@@ -560,7 +619,7 @@ The project is deployment-ready; any Node host works. A typical setup is the fro
 | Build | `npm run build` | `npm ci && npm run build` |
 | Start | (managed) | `npm start` |
 | Health check | — | `/api/health` |
-| Environment | `BACKEND_URL` = the API's public URL | `NODE_ENV=production`, `MONGODB_URI`, `JWT_ACCESS_SECRET`, `FRONTEND_URL` = the frontend URL, `TRUST_PROXY=1`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` |
+| Environment | `BACKEND_URL` = the API's public URL | `NODE_ENV=production`, `MONGODB_URI`, `JWT_ACCESS_SECRET`, `FRONTEND_URL` = the frontend URL, `TRUST_PROXY=1`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and the three `CLOUDINARY_*` variables for photo uploads |
 
 - `BACKEND_URL` is read when Next.js builds its `/api/*` rewrite. Set it before building, and rebuild if the API URL changes.
 - Create the admin on the production database with `npm run seed:admin`. Demo data can be loaded with `npm run seed -- --force`; the flag is required in production because the seed replaces doctors and patients.

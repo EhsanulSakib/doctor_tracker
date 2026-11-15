@@ -15,6 +15,9 @@ export default defineConfig({
       REFRESH_TOKEN_TTL_DAYS: '7',
       ADMIN_EMAIL: 'admin@test.dev',
       ADMIN_PASSWORD: 'Test!Passw0rd',
+      CLOUDINARY_CLOUD_NAME: 'test-cloud',
+      CLOUDINARY_API_KEY: '123456789',
+      CLOUDINARY_API_SECRET: 'test-cloudinary-secret',
     },
     // First run downloads a MongoDB binary for mongodb-memory-server.
     hookTimeout: 180_000,

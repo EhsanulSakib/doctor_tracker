@@ -6,7 +6,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
 import { IconButton } from "@/components/ui/icon-button";
-import { LogOutIcon, XIcon } from "@/components/ui/icons";
+import { Avatar } from "@/components/ui/avatar";
+import { ChevronRightIcon, LogOutIcon, XIcon } from "@/components/ui/icons";
 import { logout } from "@/features/auth/logout";
 import { cn } from "@/lib/utils";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -14,7 +15,7 @@ import { selectUser } from "@/store/slices/auth";
 import { mobileNavSet, selectMobileNavOpen } from "@/store/slices/ui";
 import { BrandMark } from "./brand";
 import { isActivePath, NAV_ITEMS } from "./nav-items";
-import { initialsOf } from "./user-menu";
+import { PROFILE_PATH, ROLE_LABELS } from "./user-menu";
 
 /** Phone navigation drawer (below `md`). Closes on navigation, Escape, backdrop tap. */
 export function MobileNav() {
@@ -66,15 +67,16 @@ export function MobileNav() {
 
       {user && (
         <div className="border-t border-line p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <div className="mb-3 flex items-center gap-3">
-            <span aria-hidden className="flex size-9 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-accent-fg">
-              {initialsOf(user.name)}
+          <Link href={PROFILE_PATH} onClick={close} className="-mx-2 mb-3 flex items-center gap-3 rounded-control p-2 transition-colors hover:bg-paper-2 focus-ring">
+            <Avatar name={user.name} src={user.avatarUrl} size={36} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-ink">{user.name}</span>
+              <span className="block truncate text-ui text-ink-muted">
+                {ROLE_LABELS[user.role] ?? user.role} · {user.email}
+              </span>
             </span>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-ink">{user.name}</p>
-              <p className="truncate text-ui text-ink-muted">{user.email}</p>
-            </div>
-          </div>
+            <ChevronRightIcon className="shrink-0 text-ink-subtle" />
+          </Link>
           <Button
             variant="secondary"
             fullWidth

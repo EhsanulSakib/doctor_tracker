@@ -6,12 +6,12 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormAlert } from "@/components/ui/form-alert";
 import { refreshNotifications } from "@/features/notifications/types";
 import { useToast } from "@/hooks/use-toast";
-import { isApiError } from "@/lib/api/errors";
+import { isApiError, isReadOnlyError } from "@/lib/api/errors";
 import { deletePatient } from "../client";
 import type { Patient } from "../types";
 
-/** Hard delete (the API keeps no history), so it always asks first. */
-export function DeletePatientDialog({ open, onClose, patient }: { open: boolean; onClose: () => void; patient: Patient | null }) {
+/** Permanent delete, so it always asks first. `onDeleted` replaces the default refresh. */
+export function DeletePatientDialog({ open, onClose, patient, onDeleted }: { open: boolean; onClose: () => void; patient: Patient | null; onDeleted?: () => void }) {
   const router = useRouter();
   const toast = useToast();
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +26,7 @@ export function DeletePatientDialog({ open, onClose, patient }: { open: boolean;
       open={open}
       onClose={close}
       title={patient ? `Delete ${patient.name}?` : "Delete patient?"}
-      description="The patient record is removed permanently. This can't be undone."
+      description="This can't be undone."
       confirmLabel="Delete patient"
       onConfirm={async () => {
         if (!patient) return;
@@ -36,9 +36,11 @@ export function DeletePatientDialog({ open, onClose, patient }: { open: boolean;
           toast.success("Patient deleted", patient.name);
           refreshNotifications();
           close();
-          router.refresh();
+          if (onDeleted) onDeleted();
+          else router.refresh();
         } catch (err) {
           if (!isApiError(err)) throw err;
+          if (isReadOnlyError(err)) return; // shown as a toast
           setError(err.message);
         }
       }}

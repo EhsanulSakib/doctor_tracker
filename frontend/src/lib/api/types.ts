@@ -9,6 +9,7 @@ export type Paginated<T> = { data: T[]; meta: PageMeta };
 /** Single-resource endpoints: `{ data: T }`. */
 export type ApiData<T> = { data: T };
 
-export type UserRole = "admin";
+/** `demo`: the public showcase account. It can view everything; the API rejects its writes. */
+export type UserRole = "admin" | "demo";
 
-export type PublicUser = { id: string; name: string; email: string; role: UserRole };
+export type PublicUser = { id: string; name: string; email: string; role: UserRole; avatarUrl: string | null };

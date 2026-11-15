@@ -1,11 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useId, type ReactNode } from "react";
-import { PAGE_SIZES } from "@/lib/constants";
+import type { ReactNode } from "react";
 import { cn, formatNumber } from "@/lib/utils";
 import { ChevronLeftIcon, ChevronRightIcon } from "./icons";
-import { Select } from "./select";
 
 type PaginationProps = {
   page: number;
@@ -16,9 +14,6 @@ type PaginationProps = {
   hrefForPage?: (page: number) => string;
   /** …or state-driven. */
   onPageChange?: (page: number) => void;
-  /** Shows the "Rows" size picker. */
-  onLimitChange?: (limit: number) => void;
-  limitOptions?: readonly number[];
 };
 
 /** `1 … 4 5 6 … 25`: first, last, current ±1, with gaps; never a gap that hides a single page. */
@@ -40,10 +35,9 @@ export function pageItems(page: number, totalPages: number): (number | "gap")[] 
   return items;
 }
 
-export function Pagination({ page, totalPages, total, limit, hrefForPage, onPageChange, onLimitChange, limitOptions = PAGE_SIZES }: PaginationProps) {
-  const limitLabelId = useId();
-  const from = total === 0 ? 0 : (page - 1) * limit + 1;
-  const to = Math.min(page * limit, total);
+export function Pagination({ page, totalPages, total, limit, hrefForPage, onPageChange }: PaginationProps) {
+  // Rows on this page: "Showing 10 of 15" on page 1, "Showing 5 of 15" on page 2.
+  const shown = total === 0 ? 0 : Math.max(0, Math.min(page * limit, total) - (page - 1) * limit);
 
   const pageControl = (target: number, content: ReactNode, options: { label: string; current?: boolean; disabled?: boolean }) => {
     const className = cn(
@@ -74,31 +68,9 @@ export function Pagination({ page, totalPages, total, limit, hrefForPage, onPage
 
   return (
     <nav aria-label="Pagination" className="flex flex-col-reverse items-center justify-between gap-3 sm:flex-row">
-      <div className="flex items-center gap-4 text-ui text-ink-muted">
-        <p className="tabular-nums">
-          {total === 0 ? (
-            "No results"
-          ) : (
-            <>
-              Showing <span className="font-medium text-ink">{from}–{to}</span> of{" "}
-              <span className="font-medium text-ink">{formatNumber(total)}</span>
-            </>
-          )}
-        </p>
-        {onLimitChange && (
-          <div className="flex items-center gap-2">
-            <span id={limitLabelId}>Rows</span>
-            <Select
-              size="sm"
-              labelId={limitLabelId}
-              value={String(limit)}
-              options={limitOptions.map((n) => ({ value: String(n), label: String(n) }))}
-              onChange={(value) => onLimitChange(Number(value))}
-              className="w-19"
-            />
-          </div>
-        )}
-      </div>
+      <p className="text-ui text-ink-subtle tabular-nums">
+        {total === 0 ? "No results" : `Showing ${formatNumber(shown)} of ${formatNumber(total)}`}
+      </p>
 
       {totalPages > 1 && (
         <div className="flex items-center gap-1">

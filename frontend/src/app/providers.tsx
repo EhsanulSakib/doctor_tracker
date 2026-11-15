@@ -4,6 +4,7 @@ import { LazyMotion, MotionConfig } from "motion/react";
 import type { ReactNode } from "react";
 import { PreferencesSync } from "@/components/layout/preferences-sync";
 import { Toaster } from "@/components/ui/toaster";
+import { TooltipLayer } from "@/components/ui/tooltip";
 import { StoreProvider } from "@/store/provider";
 
 // The animation engine loads after the first paint instead of shipping in the initial bundle.
@@ -21,6 +22,7 @@ export function Providers({ children }: { children: ReactNode }) {
             {children}
           </div>
           <Toaster />
+          <TooltipLayer />
           <PreferencesSync />
         </MotionConfig>
       </LazyMotion>

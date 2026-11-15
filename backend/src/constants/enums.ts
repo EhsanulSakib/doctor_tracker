@@ -34,6 +34,12 @@ export const PATIENT_STATUSES = ['active', 'under_treatment', 'recovered'] as co
 
 export const GENDERS = ['male', 'female', 'other'] as const;
 
+/** Chamber days, in the order of the Bangladeshi working week (Saturday first). */
+export const WEEKDAYS = ['sat', 'sun', 'mon', 'tue', 'wed', 'thu', 'fri'] as const;
+
+/** A doctor's attendance for one day. No record = not marked yet. */
+export const ATTENDANCE_STATUSES = ['present', 'absent', 'leave'] as const;
+
 export type Specialization = (typeof SPECIALIZATIONS)[number];
 export type DoctorStatus = (typeof DOCTOR_STATUSES)[number];
 export type Condition = (typeof CONDITIONS)[number];
@@ -54,3 +60,5 @@ export const NOTIFICATION_SUBJECT_KINDS = ['doctor', 'patient'] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 export type NotificationSubjectKind = (typeof NOTIFICATION_SUBJECT_KINDS)[number];
+export type Weekday = (typeof WEEKDAYS)[number];
+export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];

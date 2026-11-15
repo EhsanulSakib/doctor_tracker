@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
 import { cn } from "@/lib/utils";
 
 type IconButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "aria-label"> & {
-  /** Required: an icon-only button needs an accessible name. Also shown as a tooltip. */
+  /** Required: an icon-only button needs an accessible name. Also its tooltip (unless `title` overrides it; "" = none). */
   label: string;
   icon: ReactNode;
   variant?: "ghost" | "secondary";
@@ -36,7 +36,7 @@ export function IconButton({
       ref={ref}
       type={type}
       aria-label={label}
-      title={title ?? label}
+      data-tooltip={title === "" ? undefined : (title ?? label)}
       className={cn(
         "inline-flex shrink-0 items-center justify-center rounded-full transition-colors duration-150 ease-clinical",
         "focus-ring disabled:pointer-events-none disabled:opacity-50",

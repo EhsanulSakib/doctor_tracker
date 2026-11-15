@@ -6,6 +6,7 @@ import { dashboardRouter } from './modules/dashboard/dashboard.routes.js';
 import { doctorsRouter } from './modules/doctors/doctors.routes.js';
 import { notificationsRouter } from './modules/notifications/notifications.routes.js';
 import { patientsRouter } from './modules/patients/patients.routes.js';
+import { uploadsRouter } from './modules/uploads/uploads.routes.js';
 
 export const apiRouter = Router();
 
@@ -26,3 +27,4 @@ apiRouter.use('/doctors', doctorsRouter);
 apiRouter.use('/patients', patientsRouter);
 apiRouter.use('/dashboard', dashboardRouter);
 apiRouter.use('/notifications', notificationsRouter);
+apiRouter.use('/uploads', uploadsRouter);

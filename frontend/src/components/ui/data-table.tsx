@@ -1,12 +1,13 @@
 "use client";
 
-import { m } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Fragment, useState, type MouseEvent, type ReactNode } from "react";
 import { listItem, listStagger } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "./empty-state";
-import { ArrowDownIcon, ArrowUpIcon, SortIcon } from "./icons";
+import { IconButton } from "./icon-button";
+import { ArrowDownIcon, ArrowUpIcon, ChevronDownIcon, SortIcon } from "./icons";
 import { useIsClient } from "./portal";
 import { Skeleton } from "./skeleton";
 
@@ -44,8 +45,20 @@ type DataTableProps<T> = {
   sortHref?: (sort: string) => string;
   /** …or state-driven sorting. */
   onSortChange?: (sort: string) => void;
-  /** Per-row buttons (edit, delete), right-aligned / in the card corner. */
+  /** Per-row buttons (view, edit, delete), right-aligned / in the card corner. */
   rowActions?: (row: T) => ReactNode;
+  /** Visible heading of the actions column. */
+  actionsHeader?: string;
+  /**
+   * Makes the whole row (and card) clickable, e.g. to open the record. Keyboard users still have the
+   * link in the first cell; clicks on buttons and links inside the row keep doing their own thing.
+   */
+  onRowClick?: (row: T) => void;
+  /**
+   * Adds a down-arrow button to each row (after the row actions) that opens a panel under the row.
+   * `render` only runs while the panel is open, so its content can load lazily.
+   */
+  expandable?: { render: (row: T) => ReactNode; label: (row: T) => string };
   empty?: ReactNode;
   loading?: boolean;
   skeletonRows?: number;
@@ -54,8 +67,13 @@ type DataTableProps<T> = {
    * table, with a sticky header, instead of growing the page.
    */
   fill?: boolean;
-  /** Where the table replaces the cards: `md` (default) or `lg` (wide tables: tablets get two-column cards). */
-  cardsBelow?: "md" | "lg";
+  /**
+   * Where the table replaces the cards: `md` (default), `lg` (wide tables: tablets get two-column cards)
+   * or `xl` (tables in a half-width panel: one column of cards until the panel is wide enough).
+   */
+  cardsBelow?: "md" | "lg" | "xl";
+  /** Extra classes for the card grid (e.g. one column inside a half-width panel). */
+  cardsClassName?: string;
 };
 
 export function DataTable<T>({
@@ -67,15 +85,41 @@ export function DataTable<T>({
   sortHref,
   onSortChange,
   rowActions,
+  actionsHeader = "Actions",
+  onRowClick,
+  expandable,
   empty,
   loading = false,
   skeletonRows = 6,
   fill = false,
   cardsBelow = "md",
+  cardsClassName,
 }: DataTableProps<T>) {
   // Server-rendered rows are visible immediately (no hidden-until-hydrated content); after that, a
   // new page of rows mounts a new body (key) and staggers in.
   const isClient = useIsClient();
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
+  const toggle = (id: string) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  const hasActions = !!rowActions;
+  const expandButton = (row: T) => {
+    if (!expandable) return null;
+    const open = expanded.has(getRowId(row));
+    return (
+      <IconButton
+        size="sm"
+        label={expandable.label(row)}
+        aria-expanded={open}
+        icon={<ChevronDownIcon className={cn("transition-transform duration-200", open && "rotate-180")} />}
+        onClick={() => toggle(getRowId(row))}
+        className={cn("hover:bg-accent-soft hover:text-accent-fg", open && "bg-accent-soft text-accent-fg")}
+      />
+    );
+  };
   const initial = isClient ? "hidden" : false;
   const rowsKey = rows.length ? `${rows.length}:${getRowId(rows[0]!)}:${getRowId(rows.at(-1)!)}` : "empty";
 
@@ -84,6 +128,14 @@ export function DataTable<T>({
       <div className="rounded-panel border border-line bg-surface shadow-card">{empty ?? <EmptyState title="Nothing to show yet" />}</div>
     );
   }
+
+  // A click on a control inside the row (link, button, menu) is not a click on the row.
+  const rowClick = onRowClick
+    ? (row: T) => (event: MouseEvent<HTMLElement>) => {
+        if ((event.target as HTMLElement).closest("a, button, input, select, textarea, label, [role='menuitem']")) return;
+        onRowClick(row);
+      }
+    : undefined;
 
   const titleColumn = columns.find((c) => c.mobile === "title") ?? columns[0];
   const metaColumns = columns.filter((c) => c.mobile === "meta");
@@ -94,15 +146,21 @@ export function DataTable<T>({
       {/* Desktop / tablet: a real table. */}
       <div
         className={cn(
-          "hidden overflow-x-auto rounded-panel border border-line bg-surface shadow-card scrollbar-thin",
-          cardsBelow === "lg" ? "lg:block" : "md:block",
+          // shrink-0: inside a flex column the table keeps its full height (the page scrolls, not the table).
+          "hidden shrink-0 overflow-x-auto rounded-panel border border-line bg-surface shadow-card scrollbar-thin",
+          cardsBelow === "xl" ? "xl:block" : cardsBelow === "lg" ? "lg:block" : "md:block",
           fill && "lg:min-h-0 lg:overflow-auto",
         )}
       >
         <table className="w-full border-collapse text-sm">
           <caption className="sr-only">{caption}</caption>
           <thead>
-            <tr className="bg-paper">
+            <tr className="bg-paper/70">
+              {expandable && (
+                <th scope="col" className={cn("w-px bg-paper py-3 pr-0 pl-4 shadow-table-head", fill && "lg:sticky lg:top-0 lg:z-10")}>
+                  <span className="sr-only">Show patients</span>
+                </th>
+              )}
               {columns.map((column) => (
                 <th
                   key={column.id}
@@ -110,7 +168,7 @@ export function DataTable<T>({
                   aria-sort={ariaSort(column.sort, sort)}
                   className={cn(
                     // The bottom rule is a shadow: a border on a sticky header row scrolls away with the rows.
-                    "whitespace-nowrap bg-paper px-4 py-3 text-left text-label font-semibold uppercase text-ink-muted shadow-table-head",
+                    "whitespace-nowrap bg-paper px-4 py-3 text-left text-label font-semibold uppercase text-ink-subtle shadow-table-head first:pl-5",
                     fill && "lg:sticky lg:top-0 lg:z-10",
                     column.align === "right" && "text-right",
                     column.className,
@@ -123,9 +181,15 @@ export function DataTable<T>({
                   )}
                 </th>
               ))}
-              {rowActions && (
-                <th scope="col" className={cn("w-px bg-paper px-4 py-2.5 shadow-table-head", fill && "lg:sticky lg:top-0 lg:z-10")}>
-                  <span className="sr-only">Actions</span>
+              {hasActions && (
+                <th
+                  scope="col"
+                  className={cn(
+                    "w-px whitespace-nowrap bg-paper px-4 py-3 pr-5 text-right text-label font-semibold uppercase text-ink-subtle shadow-table-head",
+                    fill && "lg:sticky lg:top-0 lg:z-10",
+                  )}
+                >
+                  {actionsHeader}
                 </th>
               )}
             </tr>
@@ -135,35 +199,74 @@ export function DataTable<T>({
             <tbody>
               {Array.from({ length: skeletonRows }, (_, i) => (
                 <tr key={i} className="border-b border-line last:border-0">
+                  {expandable && <td className="py-3 pr-0 pl-4" />}
                   {columns.map((column) => (
                     <td key={column.id} className={cn("px-4 py-3", column.className)}>
                       {column.skeleton ?? <Skeleton className={cn("my-0.5 h-4", column.align === "right" ? "ml-auto w-12" : "w-3/4")} />}
                     </td>
                   ))}
-                  {rowActions && <td className="px-4 py-3" />}
+                  {hasActions && <td className="px-4 py-3" />}
                 </tr>
               ))}
             </tbody>
           ) : (
             <m.tbody key={rowsKey} variants={listStagger} initial={initial} animate="visible">
-              {rows.map((row) => (
-                <m.tr
-                  key={getRowId(row)}
-                  variants={listItem}
-                  className="border-b border-line transition-colors last:border-0 hover:bg-paper/80"
-                >
-                  {columns.map((column) => (
-                    <td key={column.id} className={cn("px-4 py-3 align-middle", column.align === "right" && "whitespace-nowrap text-right tabular-nums", column.className)}>
-                      {column.cell(row)}
-                    </td>
-                  ))}
-                  {rowActions && (
-                    <td className="px-2 py-1.5 text-right">
-                      <div className="flex items-center justify-end gap-0.5">{rowActions(row)}</div>
-                    </td>
-                  )}
-                </m.tr>
-              ))}
+              {rows.map((row) => {
+                const id = getRowId(row);
+                const open = expandable && expanded.has(id);
+                return (
+                  <Fragment key={id}>
+                    <m.tr
+                      variants={listItem}
+                      onClick={rowClick?.(row)}
+                      className={cn(
+                        "group/row border-b border-line transition-colors duration-150 last:border-0 hover:bg-accent-soft/40",
+                        // An accent bar on the left edge of the hovered (or expanded) row.
+                        "[&>td:first-child]:shadow-[inset_3px_0_0_transparent] hover:[&>td:first-child]:shadow-[inset_3px_0_0_var(--color-accent)]",
+                        open && "bg-accent-soft/30 [&>td:first-child]:shadow-[inset_3px_0_0_var(--color-accent)]",
+                        onRowClick && "cursor-pointer",
+                      )}
+                    >
+                      {expandable && <td className="w-px py-3.5 pr-0 pl-4 align-middle transition-[box-shadow]">{expandButton(row)}</td>}
+                      {columns.map((column) => (
+                        <td
+                          key={column.id}
+                          className={cn(
+                            "px-4 py-3.5 align-middle transition-[box-shadow] first:pl-5",
+                            column.align === "right" && "whitespace-nowrap text-right tabular-nums",
+                            column.className,
+                          )}
+                        >
+                          {column.cell(row)}
+                        </td>
+                      ))}
+                      {hasActions && (
+                        <td className="px-3 py-2 pr-4 text-right">
+                          <div className="flex items-center justify-end gap-1">{rowActions?.(row)}</div>
+                        </td>
+                      )}
+                    </m.tr>
+                    {open && (
+                      <tr className="border-b border-line bg-paper/50 last:border-0">
+                        {/* Wider than the visible columns on purpose: hidden columns still count in colSpan. */}
+                        <td colSpan={columns.length + (expandable ? 1 : 0) + (rowActions ? 1 : 0)} className="p-0">
+                          {/* width 0 + min-width 100%: the panel fills the row but never widens a column,
+                              so opening a row doesn't shift the table. */}
+                          <m.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
+                            style={{ width: 0, minWidth: "100%" }}
+                            className="overflow-hidden"
+                          >
+                            {expandable.render(row)}
+                          </m.div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </m.tbody>
           )}
         </table>
@@ -171,7 +274,14 @@ export function DataTable<T>({
 
       {/* Phones: one card per row (a wide table would scroll sideways). */}
       {/* grid-cols-1 = minmax(0, 1fr): a long unbroken value (email) truncates instead of widening the card past the screen. */}
-      <ul className={cn("grid grid-cols-1 gap-2", cardsBelow === "lg" ? "md:grid-cols-2 md:gap-3 lg:hidden" : "md:hidden")} aria-label={caption}>
+      <ul
+        className={cn(
+          "grid grid-cols-1 gap-2",
+          cardsBelow === "xl" ? "sm:grid-cols-2 sm:gap-3 xl:hidden" : cardsBelow === "lg" ? "md:grid-cols-2 md:gap-3 lg:hidden" : "md:hidden",
+          cardsClassName,
+        )}
+        aria-label={caption}
+      >
         {loading
           ? Array.from({ length: Math.min(skeletonRows, 4) }, (_, i) => (
               <li key={i} className="grid gap-3 rounded-panel border border-line bg-surface p-4 shadow-card">
@@ -186,7 +296,11 @@ export function DataTable<T>({
                 variants={listItem}
                 initial={initial}
                 animate="visible"
-                className="rounded-panel border border-line bg-surface p-4 shadow-card"
+                onClick={rowClick?.(row)}
+                className={cn(
+                  "rounded-panel border border-line bg-surface p-4 shadow-card transition-[border-color,box-shadow,transform] duration-150",
+                  onRowClick && "cursor-pointer hover:-translate-y-px hover:border-accent/40 hover:shadow-overlay",
+                )}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -199,7 +313,12 @@ export function DataTable<T>({
                       </div>
                     )}
                   </div>
-                  {rowActions && <div className="-mr-2 -mt-1.5 flex shrink-0 items-center">{rowActions(row)}</div>}
+                  {(hasActions || expandable) && (
+                    <div className="-mr-2 -mt-1.5 flex shrink-0 items-center">
+                      {rowActions?.(row)}
+                      {expandButton(row)}
+                    </div>
+                  )}
                 </div>
                 {fieldColumns.length > 0 && (
                   <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 border-t border-line pt-3 text-ui">
@@ -212,6 +331,21 @@ export function DataTable<T>({
                     ))}
                   </dl>
                 )}
+                <AnimatePresence initial={false}>
+                  {expandable && expanded.has(getRowId(row)) && (
+                    <m.div
+                      key="panel"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.22 }}
+                      className="-mx-4 -mb-4 mt-3 overflow-hidden rounded-b-panel border-t border-line bg-paper/50"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {expandable.render(row)}
+                    </m.div>
+                  )}
+                </AnimatePresence>
               </m.li>
             ))}
       </ul>

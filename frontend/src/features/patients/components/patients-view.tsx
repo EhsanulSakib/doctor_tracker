@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { formatRange } from "@/components/ui/date-range-field";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FilterTokens, FiltersButton, type FilterToken } from "@/components/ui/filter-tokens";
 import { IconButton } from "@/components/ui/icon-button";
-import { FilterIcon, PencilIcon, PlusIcon, TrashIcon, UsersIcon } from "@/components/ui/icons";
+import { DownloadIcon, EyeIcon, FilterIcon, PencilIcon, PlusIcon, TrashIcon, UsersIcon } from "@/components/ui/icons";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
@@ -22,6 +23,7 @@ import { cn, formatDate } from "@/lib/utils";
 import { patientsHref, type PatientListParams } from "../params";
 import type { Patient } from "../types";
 import { DeletePatientDialog } from "./delete-patient-dialog";
+import { ExportPatientsDialog } from "./export-patients-dialog";
 import { PatientFiltersDialog } from "./patient-filters-dialog";
 import { PatientFormDialog } from "./patient-form-dialog";
 
@@ -41,44 +43,39 @@ export const PATIENTS_COLUMNS: Column<Patient>[] = [
   {
     id: "name",
     header: "Patient",
-    // Age, gender and phone ride on the second line: a column each wouldn't fit a laptop screen.
     cell: (p) => (
-      <div className="max-w-60 min-w-0">
-        <p className="truncate text-sm leading-5 font-medium text-ink">{p.name}</p>
-        <p className="truncate text-xs leading-4 text-ink-muted tabular-nums">
-          {p.age} · {GENDER_LABELS[p.gender]} · {p.phone}
-        </p>
-      </div>
+      <p className="max-w-56 truncate text-sm leading-5 font-semibold text-ink" data-tooltip={p.name}>
+        {p.name}
+      </p>
     ),
     sort: { asc: "name", desc: "-name" },
     mobile: "title",
-    className: "min-w-56",
-    skeleton: twoLineSkeleton("w-32", "w-44"),
+    className: "min-w-40",
+    skeleton: <Skeleton className="my-0.75 h-3.5 w-32" />,
   },
+  { id: "age", header: "Age", cell: (p) => p.age, align: "right", skeleton: <Skeleton className="my-0.5 ml-auto h-4 w-8" /> },
+  { id: "gender", header: "Gender", cell: (p) => GENDER_LABELS[p.gender], mobile: "meta", skeleton: <Skeleton className="my-0.5 h-4 w-14" /> },
+  { id: "phone", header: "Phone", cell: (p) => <span className="whitespace-nowrap tabular-nums">{p.phone}</span>, skeleton: <Skeleton className="my-0.5 h-4 w-32" /> },
   { id: "condition", header: "Condition", cell: (p) => p.condition, mobile: "meta", className: "whitespace-nowrap" },
   {
     id: "status",
     header: "Status",
-    cell: (p) => (
-      <Badge tone={PATIENT_STATUS_TONES[p.status]} dot>
-        {PATIENT_STATUS_LABELS[p.status]}
-      </Badge>
-    ),
-    skeleton: <Skeleton className="my-px h-5.5 w-24 rounded-full" />,
+    cell: (p) => <Badge tone={PATIENT_STATUS_TONES[p.status]}>{PATIENT_STATUS_LABELS[p.status]}</Badge>,
+    skeleton: <Skeleton className="my-0.5 h-4 w-20" />,
   },
   {
     id: "doctor",
     header: "Doctor",
     cell: (p) =>
       p.doctor ? (
-        <div className="relative max-w-52 min-w-0">
-          <Link href={`/doctors/${p.doctor.id}`} className="block truncate rounded-sm text-sm leading-5 text-ink transition-colors after:absolute after:inset-x-0 after:-inset-y-2.5 hover:text-accent-fg focus-ring">
+        <div className="max-w-48 min-w-0">
+          <Link href={`/doctors/${p.doctor.id}`} className="block truncate rounded-sm text-sm leading-5 text-ink transition-colors hover:text-accent-fg focus-ring">
             {p.doctor.name}
           </Link>
           <p className="truncate text-xs leading-4 text-ink-muted">{p.doctor.specialization}</p>
         </div>
       ) : (
-        <span className="text-ink-muted">Not assigned</span>
+        <span className="text-ink-subtle">N/A</span>
       ),
     skeleton: twoLineSkeleton("w-32", "w-24"),
   },
@@ -87,11 +84,11 @@ export const PATIENTS_COLUMNS: Column<Patient>[] = [
     header: "Admitted",
     cell: (p) => formatDate(p.admissionDate),
     sort: { asc: "admissionDate", desc: "-admissionDate", first: "desc" },
-    className: "hidden whitespace-nowrap tabular-nums xl:table-cell",
+    className: "hidden whitespace-nowrap tabular-nums 2xl:table-cell",
   },
 ];
 
-type DialogKind = "create" | "edit" | "delete" | "filters";
+type DialogKind = "create" | "edit" | "delete" | "filters" | "export";
 
 type PatientsViewProps = {
   patients: Patient[];
@@ -103,6 +100,7 @@ type PatientsViewProps = {
 
 /** All patients: same URL-as-state pattern as the doctors list, plus a doctor filter and reassignment in the form. */
 export function PatientsView({ patients, meta, params, doctor }: PatientsViewProps) {
+  const router = useRouter();
   const [isPending, go] = useNavigateTransition();
   const [dialog, setDialog] = useState<DialogKind | null>(null);
   const [target, setTarget] = useState<Patient | null>(null);
@@ -119,7 +117,7 @@ export function PatientsView({ patients, meta, params, doctor }: PatientsViewPro
   const hasQuery = tokens.length > 0 || !!params.search;
 
   return (
-    <div className="flex flex-col gap-3 lg:min-h-0 lg:flex-1">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <SearchInput
           key={searchKey}
@@ -147,27 +145,31 @@ export function PatientsView({ patients, meta, params, doctor }: PatientsViewPro
           className="hidden w-48 xl:flex"
         />
         <FiltersButton count={tokens.length} onClick={() => open("filters")} />
-        <Button icon={<PlusIcon />} onClick={() => open("create")} className="ml-auto max-sm:w-11 max-sm:px-0">
+        <Button variant="secondary" icon={<DownloadIcon />} onClick={() => open("export")} className="ml-auto max-sm:w-11 max-sm:px-0">
+          <span className="max-sm:sr-only">Export</span>
+        </Button>
+        <Button icon={<PlusIcon />} onClick={() => open("create")} className="max-sm:w-11 max-sm:px-0">
           <span className="max-sm:sr-only">New patient</span>
         </Button>
       </div>
 
       <FilterTokens tokens={tokens} onClearAll={() => navigate(CLEARED_FILTERS)} />
 
-      <div aria-busy={isPending} className={cn("flex min-h-0 flex-col transition-opacity duration-200", isPending && "opacity-60")}>
+      <div aria-busy={isPending} className={cn("flex flex-col transition-opacity duration-200", isPending && "opacity-60")}>
         <DataTable
-          fill
-          cardsBelow="lg"
+          cardsBelow="xl"
           columns={PATIENTS_COLUMNS}
           rows={patients}
           getRowId={(p) => p.id}
           caption="Patients"
           sort={params.sort}
           onSortChange={(sort) => navigate({ sort: sort as PatientListParams["sort"] })}
+          onRowClick={(p) => router.push(`/patients/${p.id}`)}
           rowActions={(p) => (
             <>
-              <IconButton size="sm" label={`Edit ${p.name}`} icon={<PencilIcon />} onClick={() => open("edit", p)} />
-              <IconButton size="sm" label={`Delete ${p.name}`} icon={<TrashIcon />} onClick={() => open("delete", p)} className="hover:text-danger" />
+              <IconButton size="sm" label={`View ${p.name}`} title="View patient" icon={<EyeIcon />} onClick={() => router.push(`/patients/${p.id}`)} className="hover:bg-accent-soft hover:text-accent-fg" />
+              <IconButton size="sm" label={`Edit ${p.name}`} title="Edit patient" icon={<PencilIcon />} onClick={() => open("edit", p)} className="hover:bg-accent-soft hover:text-accent-fg" />
+              <IconButton size="sm" label={`Delete ${p.name}`} title="Delete patient" icon={<TrashIcon />} onClick={() => open("delete", p)} className="hover:bg-danger-soft hover:text-danger" />
             </>
           )}
           empty={
@@ -210,12 +212,12 @@ export function PatientsView({ patients, meta, params, doctor }: PatientsViewPro
             total={meta.total}
             limit={meta.limit}
             onPageChange={(page) => navigate({ page })}
-            onLimitChange={(limit) => navigate({ limit })}
           />
         </div>
       )}
 
       <PatientFormDialog open={dialog === "create" || dialog === "edit"} onClose={close} patient={dialog === "create" ? null : target} />
+      <ExportPatientsDialog open={dialog === "export"} onClose={close} params={params} pageRows={patients} filteredTotal={meta.total} hasFilters={hasQuery} />
       <DeletePatientDialog open={dialog === "delete"} onClose={close} patient={target} />
       <PatientFiltersDialog
         open={dialog === "filters"}
@@ -252,16 +254,17 @@ function filterTokens(params: PatientListParams, doctor: DoctorOption | null, na
 /** Same layout as <PatientsView> while the page streams in (toolbar, the real table in loading mode, pagination). */
 export function PatientsListSkeleton() {
   return (
-    <div aria-hidden className="flex flex-col gap-3 lg:min-h-0 lg:flex-1">
+    <div aria-hidden className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <Skeleton className="h-9 min-w-0 flex-1 pointer-coarse:h-11 sm:max-w-80" />
         <Skeleton className="hidden h-9 w-44 xl:block" />
         <Skeleton className="hidden h-9 w-48 xl:block" />
         <Skeleton className="h-9 w-11 pointer-coarse:h-11 sm:w-24" />
-        <Skeleton className="ml-auto h-9 w-11 pointer-coarse:h-11 sm:w-32" />
+        <Skeleton className="ml-auto h-9 w-11 pointer-coarse:h-11 sm:w-24" />
+        <Skeleton className="h-9 w-11 pointer-coarse:h-11 sm:w-32" />
       </div>
-      <div className="flex min-h-0 flex-col">
-        <DataTable fill loading cardsBelow="lg" skeletonRows={10} columns={PATIENTS_COLUMNS} rows={[]} getRowId={() => ""} caption="Patients" rowActions={() => null} />
+      <div className="flex flex-col">
+        <DataTable loading cardsBelow="xl" skeletonRows={10} columns={PATIENTS_COLUMNS} rows={[]} getRowId={() => ""} caption="Patients" rowActions={() => null} />
       </div>
       <div className="flex shrink-0 flex-col-reverse items-center justify-between gap-3 sm:flex-row">
         <Skeleton className="h-8 w-60 pointer-coarse:h-10" />

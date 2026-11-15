@@ -7,7 +7,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { DOCTOR_STATUS_LABELS, DOCTOR_STATUSES, SPECIALIZATIONS } from "@/lib/constants";
+import { CHAMBER_SHIFT_LABELS, CHAMBER_SHIFTS, DOCTOR_STATUS_LABELS, DOCTOR_STATUSES, SPECIALIZATIONS, WEEKDAY_LABELS, WEEKDAYS } from "@/lib/constants";
 import type { DoctorFilters, DoctorListParams } from "../params";
 import { DOCTOR_SORT_LABELS, DOCTOR_SORTS, type DoctorSort } from "../types";
 
@@ -15,6 +15,8 @@ export type FiltersAndSort = DoctorFilters & { sort: DoctorSort };
 
 const SPECIALIZATION_OPTIONS = SPECIALIZATIONS.map((value) => ({ value, label: value }));
 const STATUS_OPTIONS = DOCTOR_STATUSES.map((value) => ({ value, label: DOCTOR_STATUS_LABELS[value] }));
+export const DAY_OPTIONS = [{ value: "today", label: "Today" }, ...WEEKDAYS.map((value) => ({ value, label: WEEKDAY_LABELS[value].long }))];
+const SHIFT_OPTIONS = CHAMBER_SHIFTS.map((value) => ({ value, label: CHAMBER_SHIFT_LABELS[value] }));
 const SORT_OPTIONS = DOCTOR_SORTS.map((value) => ({ value, label: DOCTOR_SORT_LABELS[value] }));
 
 type DoctorFiltersDialogProps = {
@@ -45,6 +47,8 @@ function FiltersForm({ params, hospitals, onApply, onClose }: Omit<DoctorFilters
     specialization: params.specialization,
     hospital: params.hospital,
     status: params.status,
+    day: params.day,
+    shift: params.shift,
     joinedFrom: params.joinedFrom,
     joinedTo: params.joinedTo,
     expMin: params.expMin,
@@ -73,7 +77,17 @@ function FiltersForm({ params, hospitals, onApply, onClose }: Omit<DoctorFilters
       </Field>
       <Field label="Status">
         {(p, { labelId }) => (
-          <Select {...p} labelId={labelId} value={draft.status ?? ""} onChange={(v) => set({ status: v || undefined })} options={STATUS_OPTIONS} emptyOption="All statuses" />
+          <Select {...p} labelId={labelId} value={draft.status ?? ""} onChange={(v) => set({ status: (v || undefined) as FiltersAndSort["status"] })} options={STATUS_OPTIONS} emptyOption="All statuses" />
+        )}
+      </Field>
+      <Field label="Chamber day">
+        {(p, { labelId }) => (
+          <Select {...p} labelId={labelId} value={draft.day ?? ""} onChange={(v) => set({ day: (v || undefined) as FiltersAndSort["day"] })} options={DAY_OPTIONS} emptyOption="Any day" />
+        )}
+      </Field>
+      <Field label="Chamber time">
+        {(p, { labelId }) => (
+          <Select {...p} labelId={labelId} value={draft.shift ?? ""} onChange={(v) => set({ shift: (v || undefined) as FiltersAndSort["shift"] })} options={SHIFT_OPTIONS} emptyOption="Any time" />
         )}
       </Field>
       <Field label="Hospital" className="sm:col-span-2">
@@ -105,7 +119,7 @@ function FiltersForm({ params, hospitals, onApply, onClose }: Omit<DoctorFilters
       <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line pt-4 sm:col-span-2">
         <Button
           variant="ghost"
-          onClick={() => setDraft({ specialization: undefined, hospital: undefined, status: undefined, joinedFrom: undefined, joinedTo: undefined, expMin: undefined, expMax: undefined, sort: draft.sort })}
+          onClick={() => setDraft({ specialization: undefined, hospital: undefined, status: undefined, day: undefined, shift: undefined, joinedFrom: undefined, joinedTo: undefined, expMin: undefined, expMax: undefined, sort: draft.sort })}
         >
           Clear filters
         </Button>

@@ -184,3 +184,29 @@ export const UserPlusIcon = createIcon(
   </>,
 );
 export const SwapIcon = createIcon("Swap", <path d="M4 8h14M14.5 4.5L18 8l-3.5 3.5M20 16H6M9.5 12.5L6 16l3.5 3.5" />);
+export const DownloadIcon = createIcon("Download", <path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14" />);
+export const FileTextIcon = createIcon(
+  "FileText",
+  <path d="M14 3.5H7A1.5 1.5 0 0 0 5.5 5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8zM14 3.5V8h4.5M9 12.5h6M9 16h6" />,
+);
+export const SheetIcon = createIcon(
+  "Sheet",
+  <path d="M5.5 4.5h13A1.5 1.5 0 0 1 20 6v12a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V6a1.5 1.5 0 0 1 1.5-1.5zM4 9.5h16M4 14.5h16M10 9.5v10" />,
+);
+export const MapPinIcon = createIcon("MapPin", <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11zM12 12.2a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4z" />);
+export const WalletIcon = createIcon(
+  "Wallet",
+  <path d="M4.5 7.5h14A1.5 1.5 0 0 1 20 9v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V6.5A2 2 0 0 1 6 4.5h11M16 13.75h.01" />,
+);
+export const AwardIcon = createIcon("Award", <path d="M12 14.5a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM8.8 13.4 7.5 20l4.5-2.5 4.5 2.5-1.3-6.6" />);
+export const IdCardIcon = createIcon(
+  "IdCard",
+  <path d="M4.5 5.5h15A1.5 1.5 0 0 1 21 7v10a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17V7a1.5 1.5 0 0 1 1.5-1.5zM9 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM6 15.5c.6-1.4 1.7-2 3-2s2.4.6 3 2M14.5 10h4M14.5 13.5h3" />,
+);
+export const CopyIcon = createIcon(
+  "Copy",
+  <path d="M9 9.5A1.5 1.5 0 0 1 10.5 8h8A1.5 1.5 0 0 1 20 9.5v9a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 9 18.5zM15 8V5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H9" />,
+);
+export const ChevronsLeftIcon = createIcon("ChevronsLeft", <path d="M11.5 17l-5-5 5-5M18 17l-5-5 5-5" />);
+export const ChevronsRightIcon = createIcon("ChevronsRight", <path d="M12.5 17l5-5-5-5M6 17l5-5-5-5" />);
+export const RotateCcwIcon = createIcon("RotateCcw", <path d="M4 5v5h5M4.6 14.5A8 8 0 1 0 6.3 6.3L4 9" />);

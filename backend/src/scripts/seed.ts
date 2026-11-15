@@ -8,11 +8,13 @@
  * 30d / 90d / 12m views always have data.
  * Notifications (the topbar bell) are rebuilt from those people: about 30 over the last 7 days,
  * the newest 12 unread.
+ * Every doctor also gets profile details (degrees, fee, chamber days and hours) and 18 weeks of
+ * attendance, from a second random generator so the people above stay exactly the same.
  * Refresh tokens (sessions) are left alone. Refuses to run with NODE_ENV=production unless --force.
  *
  * To copy the result to the shared database afterwards: npm run db:sync -- --yes
  */
-import { faker } from '@faker-js/faker';
+import { en, Faker, faker } from '@faker-js/faker';
 import mongoose from 'mongoose';
 import { connectDb, disconnectDb } from '../config/db.js';
 import { env, isProd } from '../config/env.js';
@@ -26,12 +28,15 @@ import {
   type Specialization,
 } from '../constants/enums.js';
 import { todayAsDateOnly } from '../lib/dates.js';
+import { AttendanceModel } from '../modules/attendance/attendance.model.js';
 import { seedAdmin } from '../modules/auth/auth.seed.js';
 import { UserModel } from '../modules/auth/user.model.js';
 import { DoctorModel } from '../modules/doctors/doctor.model.js';
 import { NotificationModel } from '../modules/notifications/notification.model.js';
 import { notificationCopy, type NotificationInput } from '../modules/notifications/notifications.service.js';
 import { PatientModel } from '../modules/patients/patient.model.js';
+import { NAMES } from './seed-names.js';
+import { ATTENDANCE_DAYS, buildAttendance, HOSPITALS, profileDetails } from './seed-profiles.js';
 
 const SEED = 20261114;
 const DOCTOR_COUNT = 15; // at least one per specialization (10)
@@ -40,33 +45,6 @@ const NOTIFICATION_COUNT = 30;
 const UNREAD_NOTIFICATIONS = 12; // more than 9, so the bell shows "9+"
 const MAX_RECOVERIES = 8;
 
-/** Fictional hospitals across Bangladesh (most in Dhaka). Emails use reserved example.org domains. */
-const HOSPITALS = [
-  { name: 'Dhanmondi Lakeview Hospital', domain: 'lakeview-dhaka.example.org' },
-  { name: 'Gulshan Crescent Medical Centre', domain: 'crescent-gulshan.example.org' },
-  { name: 'Uttara Northpoint Hospital', domain: 'northpoint-uttara.example.org' },
-  { name: 'Mirpur Shapla Clinic', domain: 'shapla-mirpur.example.org' },
-  { name: 'Chattogram Bayview Hospital', domain: 'bayview-ctg.example.org' },
-  { name: 'Sylhet Tea Valley Medical', domain: 'teavalley-sylhet.example.org' },
-  { name: 'Rajshahi Padma Care Centre', domain: 'padmacare-rajshahi.example.org' },
-  { name: 'Khulna Rupsha General Hospital', domain: 'rupsha-khulna.example.org' },
-];
-
-/** Bangladeshi names, romanized as they appear on English-language records. */
-const NAMES = {
-  muslim: {
-    male: ['Tanvir', 'Arif', 'Fahim', 'Imran', 'Sabbir', 'Mahmudul', 'Rafiqul', 'Shakil', 'Nazmul', 'Jahid', 'Rakibul', 'Sajid', 'Tareq', 'Ashraful', 'Habibur', 'Mizanur', 'Kamrul', 'Mehedi', 'Rasel', 'Zahid', 'Farhan', 'Tahmid', 'Nafis', 'Ishtiaque', 'Mostafizur', 'Saiful', 'Anisul', 'Rezaul'],
-    female: ['Nusrat', 'Farzana', 'Sadia', 'Tasnim', 'Sumaiya', 'Afsana', 'Nasrin', 'Shirin', 'Roksana', 'Fatema', 'Ayesha', 'Mahmuda', 'Sharmin', 'Jannatul', 'Tahmina', 'Rumana', 'Shabnam', 'Lamia', 'Nabila', 'Anika', 'Maliha', 'Sanjida', 'Rehana', 'Dilruba', 'Mithila', 'Shamima'],
-    surname: ['Ahmed', 'Hossain', 'Rahman', 'Islam', 'Chowdhury', 'Khan', 'Uddin', 'Sarkar', 'Talukder', 'Siddique', 'Haque', 'Kabir', 'Alam', 'Karim', 'Bhuiyan', 'Mollah', 'Sheikh', 'Majumder', 'Miah', 'Hasan'],
-    femaleSurname: ['Akter', 'Begum', 'Khatun', 'Sultana'],
-  },
-  hindu: {
-    male: ['Sourav', 'Pritom', 'Arnab', 'Dipankar', 'Subrata', 'Anik', 'Joydeep', 'Partha', 'Shuvo', 'Tapas'],
-    female: ['Puja', 'Moumita', 'Ananya', 'Rupa', 'Priyanka', 'Sharmistha', 'Tanushree', 'Mousumi', 'Dipa', 'Shreya'],
-    surname: ['Das', 'Roy', 'Saha', 'Paul', 'Chakraborty', 'Ghosh', 'Dey', 'Sen', 'Biswas', 'Mondal'],
-    femaleSurname: [] as string[],
-  },
-};
 
 type PersonName = { first: string; last: string; sex: 'male' | 'female' };
 
@@ -134,6 +112,10 @@ const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
 const phone = () => `+880 1${faker.number.int({ min: 3, max: 9 })}${faker.string.numeric(2)}-${faker.string.numeric(6)}`;
 const utcMidnight = (date: Date) => new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 
+// ─── Profile details and attendance (own generator: adding them never changes the people) ─────
+
+const extra = new Faker({ locale: [en] });
+
 function buildDoctors(today: Date) {
   // Every specialization at least once, then weighted extras, in random order.
   const extraChoices = SPECIALIZATIONS.map((value) => ({ weight: EXTRA_SPECIALIZATION_WEIGHTS[value], value }));
@@ -158,6 +140,7 @@ function buildDoctors(today: Date) {
     if (emails.has(email)) email = email.replace('@', `${i}@`);
     emails.add(email);
 
+    const yearsOfExperience = faker.number.int({ min: 2, max: 35 });
     return {
       name: `Dr. ${first} ${last}`,
       specialization,
@@ -165,9 +148,10 @@ function buildDoctors(today: Date) {
       phone: phone(),
       email,
       status: statuses[i]!,
-      yearsOfExperience: faker.number.int({ min: 2, max: 35 }),
+      yearsOfExperience,
       // Joined 1–6 years ago, so every doctor predates the 12-month patient window.
       joinedAt: utcMidnight(faker.date.between({ from: today.getTime() - 6 * 365 * DAY_MS, to: today.getTime() - 365 * DAY_MS })),
+      ...profileDetails(extra, specialization, hospital.name, yearsOfExperience),
     };
   });
 }
@@ -373,17 +357,30 @@ const target = `${mongoose.connection.host}/${mongoose.connection.name}`;
 
 try {
   faker.seed(SEED);
+  extra.seed(SEED + 1);
   const today = todayAsDateOnly(); // today's date in APP_TIMEZONE
 
-  await Promise.all([UserModel.syncIndexes(), DoctorModel.syncIndexes(), PatientModel.syncIndexes(), NotificationModel.syncIndexes()]);
+  await Promise.all([
+    UserModel.syncIndexes(),
+    DoctorModel.syncIndexes(),
+    PatientModel.syncIndexes(),
+    NotificationModel.syncIndexes(),
+    AttendanceModel.syncIndexes(),
+  ]);
   const admin = await seedAdmin({ name: env.ADMIN_NAME, email: env.ADMIN_EMAIL, password: env.ADMIN_PASSWORD });
 
-  await Promise.all([PatientModel.deleteMany({}), DoctorModel.deleteMany({}), NotificationModel.deleteMany({})]);
+  // Photos uploaded with `npm run photos` survive a re-seed: the faker seed recreates the same people (same names).
+  const photos = new Map(
+    (await DoctorModel.find({ photoUrl: { $type: 'string' } }, { name: 1, photoUrl: 1 }).lean()).map((d) => [d.name, d.photoUrl as string]),
+  );
+
+  await Promise.all([PatientModel.deleteMany({}), DoctorModel.deleteMany({}), NotificationModel.deleteMany({}), AttendanceModel.deleteMany({})]);
   // insertMany runs schema validation and the searchKey hook for every document.
-  const doctors = await DoctorModel.insertMany(buildDoctors(today));
+  const doctors = await DoctorModel.insertMany(buildDoctors(today).map((d) => ({ ...d, photoUrl: photos.get(d.name) ?? null })));
   const patients = await PatientModel.insertMany(buildPatients(doctors, today));
   // createdAt is set explicitly (Mongoose only fills it in when it is missing).
   const notifications = await NotificationModel.insertMany(buildNotifications(doctors, patients, today, new Date()));
+  const attendance = await AttendanceModel.insertMany(buildAttendance(extra, doctors, today));
 
   const admissions = patients.map((p) => p.admissionDate.getTime());
   const last30 = admissions.filter((t) => t > today.getTime() - 30 * DAY_MS).length;
@@ -391,6 +388,7 @@ try {
   console.log(`Seeded ${target} (today in ${env.APP_TIMEZONE}: ${today.toISOString().slice(0, 10)})`);
   console.log(`  admin     ${admin.email}`);
   console.log(`  doctors   ${doctors.length} (${doctors.filter((d) => d.status === 'active').length} active)`);
+  console.log(`  attendance ${attendance.length} days marked (last ${ATTENDANCE_DAYS} days)`);
   console.log(`  notifications ${notifications.length} (${notifications.filter((n) => !n.readAt).length} unread), ${notifications.at(-1)?.createdAt.toISOString()} → ${notifications[0]?.createdAt.toISOString()}`);
   console.log(`  patients  ${patients.length}, admitted ${new Date(Math.min(...admissions)).toISOString().slice(0, 10)} → ${new Date(Math.max(...admissions)).toISOString().slice(0, 10)} (${last30} in the last 30 days)`);
 } finally {

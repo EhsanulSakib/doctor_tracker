@@ -64,6 +64,11 @@ export const phoneSchema = z
     'Enter a valid phone number',
   );
 
+/** `HH:MM`, 24-hour clock. */
+export const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export const timeSchema = z.string('Enter a time').regex(TIME_PATTERN, 'Use the HH:MM format');
+
 export const personNameSchema = z.string('Name is required').trim().min(2, 'Name is too short').max(80, 'Name is too long');
 
 /** Rejects a range where the start is after the end. */

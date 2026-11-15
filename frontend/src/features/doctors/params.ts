@@ -1,4 +1,13 @@
-import { DOCTOR_STATUSES, SPECIALIZATIONS, type DoctorStatus, type Specialization } from "@/lib/constants";
+import {
+  CHAMBER_DAY_FILTERS,
+  CHAMBER_SHIFTS,
+  DOCTOR_STATUSES,
+  SPECIALIZATIONS,
+  type ChamberDayFilter,
+  type ChamberShift,
+  type DoctorStatus,
+  type Specialization,
+} from "@/lib/constants";
 import { DEFAULT_PAGE_SIZE, orderedRange, readDate, readEnum, readInt, readPaging, readString, type RawSearchParams } from "@/lib/list-params";
 import { toQueryString, type QueryParams } from "@/lib/utils";
 import { DEFAULT_DOCTOR_SORT, DOCTOR_SORTS, type DoctorSort } from "./types";
@@ -11,6 +20,9 @@ export type DoctorListParams = {
   specialization?: Specialization;
   hospital?: string;
   status?: DoctorStatus;
+  /** Chamber schedule: sits on this day, starting in this part of the day. */
+  day?: ChamberDayFilter;
+  shift?: ChamberShift;
   joinedFrom?: string;
   joinedTo?: string;
   expMin?: number;
@@ -18,7 +30,7 @@ export type DoctorListParams = {
   sort: DoctorSort;
 };
 
-export type DoctorFilters = Pick<DoctorListParams, "specialization" | "hospital" | "status" | "joinedFrom" | "joinedTo" | "expMin" | "expMax">;
+export type DoctorFilters = Pick<DoctorListParams, "specialization" | "hospital" | "status" | "day" | "shift" | "joinedFrom" | "joinedTo" | "expMin" | "expMax">;
 
 export function parseDoctorParams(raw: RawSearchParams): DoctorListParams {
   const [joinedFrom, joinedTo] = orderedRange(readDate(raw, "joinedFrom"), readDate(raw, "joinedTo"));
@@ -29,6 +41,8 @@ export function parseDoctorParams(raw: RawSearchParams): DoctorListParams {
     specialization: readEnum(raw, "specialization", SPECIALIZATIONS),
     hospital: readString(raw, "hospital", 120),
     status: readEnum(raw, "status", DOCTOR_STATUSES),
+    day: readEnum(raw, "day", CHAMBER_DAY_FILTERS),
+    shift: readEnum(raw, "shift", CHAMBER_SHIFTS),
     joinedFrom,
     joinedTo,
     expMin,
@@ -57,6 +71,6 @@ export function doctorsHref(params: DoctorListParams, patch: Partial<DoctorListP
 }
 
 export const activeFilterCount = (params: DoctorListParams) =>
-  [params.specialization, params.hospital, params.status, params.joinedFrom || params.joinedTo, params.expMin !== undefined || params.expMax !== undefined].filter(
+  [params.specialization, params.hospital, params.status, params.day, params.shift, params.joinedFrom || params.joinedTo, params.expMin !== undefined || params.expMax !== undefined].filter(
     Boolean,
   ).length;

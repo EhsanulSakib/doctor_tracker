@@ -27,6 +27,16 @@ const envSchema = z.object({
   ADMIN_EMAIL: z.email().default('admin@doctortracker.dev'),
   ADMIN_PASSWORD: z.string().min(8).optional(),
 
+  // The read-only showcase account behind the "Demo login" button (created on first use).
+  DEMO_NAME: z.string().min(2).default('Demo Admin'),
+  DEMO_EMAIL: z.email().default('demo@doctortracker.dev'),
+
+  // Cloudinary (photo uploads). Leave unset to disable uploads; photos are always optional.
+  CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
+  CLOUDINARY_API_KEY: z.string().min(1).optional(),
+  CLOUDINARY_API_SECRET: z.string().min(1).optional(),
+  CLOUDINARY_FOLDER: z.string().min(1).default('doctor-tracker'),
+
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 
   // The clinic's timezone. Decides what "today" is for date-only fields and dashboard ranges.

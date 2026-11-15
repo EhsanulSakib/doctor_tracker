@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useNow } from "@/hooks/use-now";
 import { useToast } from "@/hooks/use-toast";
 import { clientFetch } from "@/lib/api/client-fetch";
+import { isReadOnlyError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "./relative-time";
 import {
@@ -124,8 +125,9 @@ export function NotificationBell() {
     setFeed((current) => ({ ...current, items: current.items.map((n) => ({ ...n, read: true })), unread: 0 }));
     try {
       await clientFetch("/notifications/read-all", { method: "POST" });
-    } catch {
+    } catch (error) {
       setFeed(before);
+      if (isReadOnlyError(error)) return; // shown as a toast
       toast.error("Couldn't mark notifications as read", "Please try again.");
     }
   };
@@ -139,7 +141,8 @@ export function NotificationBell() {
       open={open}
       onOpenChange={handleOpenChange}
       initialFocus="panel"
-      className="flex max-h-(--panel-max-height) w-95 flex-col p-0"
+      // At most ~5 notifications tall (the list scrolls), never taller than the space below the bell.
+      className="flex max-h-[min(26rem,var(--panel-max-height))] w-95 flex-col p-0"
       trigger={(props) => (
         <button
           {...props}
@@ -242,7 +245,7 @@ function NotificationList({ feed, onRetry, onOpenItem }: { feed: Feed; onRetry: 
               href={notificationHref(item)}
               onClick={() => onOpenItem(item)}
               className={cn(
-                "flex gap-3 px-4 py-3 transition-colors hover:bg-paper-2",
+                "flex gap-3 px-4 py-2.5 transition-colors hover:bg-paper-2",
                 "outline-none focus-visible:bg-paper-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent-fg",
                 !item.read && "bg-accent-soft/50",
               )}

@@ -13,7 +13,7 @@ import { Input, Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { refreshNotifications } from "@/features/notifications/types";
 import { useToast } from "@/hooks/use-toast";
-import { isApiError } from "@/lib/api/errors";
+import { isApiError, isReadOnlyError } from "@/lib/api/errors";
 import { CONDITIONS, GENDER_LABELS, GENDERS, PATIENT_STATUS_LABELS, PATIENT_STATUSES, PHONE_PLACEHOLDER } from "@/lib/constants";
 import { todayIso } from "@/lib/utils";
 import { DoctorSelect } from "@/features/doctors/components/doctor-select";
@@ -117,6 +117,7 @@ function PatientForm({
       onSaved();
     } catch (error) {
       if (!isApiError(error)) throw error;
+      if (isReadOnlyError(error)) return; // shown as a toast
       // With a fixed doctor there is no doctor field to show the error on: it becomes a form error.
       const fieldErrors = Object.entries(error.fieldErrors)
         .map(([field, message]) => [fieldOf(field), message] as const)
@@ -163,7 +164,7 @@ function PatientForm({
       <Field label="Phone" required error={errors.phone?.message}>
         {(p) => <Input {...p} {...register("phone")} type="tel" inputMode="tel" autoComplete="off" placeholder={PHONE_PLACEHOLDER} />}
       </Field>
-      <Field label="Email" hint="Optional" error={errors.email?.message}>
+      <Field label="Email" error={errors.email?.message}>
         {(p) => <Input {...p} {...register("email")} type="email" inputMode="email" autoComplete="off" placeholder="name@example.com" />}
       </Field>
       <Field label="Condition" required error={errors.condition?.message}>
@@ -197,7 +198,7 @@ function PatientForm({
           />
         )}
       </Field>
-      <Field label="Notes" hint="Optional" error={errors.notes?.message} className="sm:col-span-2">
+      <Field label="Notes" error={errors.notes?.message} className="sm:col-span-2">
         {(p) => <Textarea {...p} {...register("notes")} rows={3} maxLength={1000} />}
       </Field>
     </form>

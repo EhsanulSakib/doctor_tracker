@@ -3,16 +3,10 @@ import Image from "next/image";
 import doctorPhoto from "@/assets/login-doctor.jpg";
 import { BrandMark } from "@/components/layout/brand";
 import { LoginForm } from "@/features/auth/login-form";
+import { LoginShowcase } from "@/features/auth/login-showcase";
 import { atLeast } from "@/lib/breakpoints";
 
 export const metadata: Metadata = { title: "Sign in" };
-
-const FEATURES = [
-  "Add and update doctor profiles",
-  "Assign patients to doctors",
-  "Search, filter and sort records",
-  "See patient statistics on the dashboard",
-] as const;
 
 /**
  * Static page (no session read here): proxy.ts already sends signed-in visitors on to the app.
@@ -47,24 +41,21 @@ export default function LoginPage() {
             <span className="text-lg font-semibold tracking-tight">Doctor Tracker</span>
           </div>
 
-          <div className="max-w-md pb-2">
-            <h2 className="text-3xl font-semibold tracking-tight">Doctor and patient management</h2>
-            <ul className="mt-6 list-disc space-y-2 pl-5 text-lead text-on-photo/90 marker:text-on-photo/60">
-              {FEATURES.map((feature) => (
-                <li key={feature}>{feature}</li>
-              ))}
-            </ul>
-          </div>
+          <LoginShowcase />
         </div>
       </aside>
 
-      <section className="flex items-center justify-center px-4 py-12 scrollbar-thin sm:px-6 lg:overflow-y-auto">
-        <div className="w-full max-w-sm animate-rise">
-          <div className="mb-10 flex items-center gap-2.5 lg:hidden">
+      <section className="relative flex items-center justify-center overflow-hidden px-4 py-12 scrollbar-thin sm:px-6 lg:overflow-y-auto">
+        {/* Soft accent glows behind the form. */}
+        <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 size-96 rounded-full bg-accent/15 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 size-80 rounded-full bg-accent-2/10 blur-3xl" />
+
+        <div className="relative w-full max-w-md animate-rise rounded-panel border border-line bg-surface/80 p-6 shadow-overlay backdrop-blur-sm sm:p-8">
+          <div className="mb-8 flex items-center gap-2.5 lg:hidden">
             <BrandMark />
             <span className="text-lg font-semibold tracking-tight text-ink">Doctor Tracker</span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">Sign in</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-ink">Welcome back</h1>
           <LoginForm className="mt-8" />
         </div>
       </section>

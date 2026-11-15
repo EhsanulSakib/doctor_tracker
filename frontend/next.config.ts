@@ -26,6 +26,8 @@ const nextConfig: NextConfig = {
   images: {
     // AVIF first (smallest), WebP fallback; Next picks per browser from the Accept header.
     formats: ["image/avif", "image/webp"],
+    // Profile and doctor photos uploaded to Cloudinary.
+    remotePatterns: [{ protocol: "https", hostname: "res.cloudinary.com", pathname: "/**" }],
   },
   turbopack: {
     rules: {

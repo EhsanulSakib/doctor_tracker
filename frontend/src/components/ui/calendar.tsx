@@ -308,7 +308,7 @@ function NavButton({ label, disabled, onClick, children }: { label: string; disa
     <button
       type="button"
       aria-label={label}
-      title={label}
+      data-tooltip={label}
       disabled={disabled}
       onClick={onClick}
       className="flex size-8 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-paper-2 hover:text-ink focus-ring disabled:pointer-events-none disabled:opacity-35"

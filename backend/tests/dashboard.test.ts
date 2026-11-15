@@ -116,8 +116,8 @@ describe('GET /api/dashboard/stats: numbers', () => {
     expect(sum(series)).toBe(data.kpis.newPatients.current);
 
     expect(data.topDoctors).toEqual([
-      { id: busy.id, name: 'Dr. Busy', specialization: 'Cardiology', count: 3 },
-      { id: away.id, name: 'Dr. Away', specialization: 'Neurology', count: 1 },
+      { id: busy.id, name: 'Dr. Busy', specialization: 'Cardiology', photoUrl: null, count: 3 },
+      { id: away.id, name: 'Dr. Away', specialization: 'Neurology', photoUrl: null, count: 1 },
     ]);
 
     expect(data.byCondition.slice(0, 3)).toEqual([
@@ -135,6 +135,32 @@ describe('GET /api/dashboard/stats: numbers', () => {
       { key: 'Cardiology', count: 2 },
       { key: 'Neurology', count: 1 },
     ]);
+
+    expect(data.doctorsByStatus).toEqual([
+      { key: 'active', count: 2 },
+      { key: 'on_leave', count: 1 },
+      { key: 'inactive', count: 0 },
+    ]);
+    // Every test patient is 42 and female (tests/helpers.ts).
+    expect(data.byAgeGroup).toEqual([
+      { key: '0-17', count: 0 },
+      { key: '18-34', count: 0 },
+      { key: '35-49', count: 4 },
+      { key: '50-64', count: 0 },
+      { key: '65+', count: 0 },
+    ]);
+    expect(data.byGender).toEqual([
+      { key: 'male', count: 0 },
+      { key: 'female', count: 4 },
+      { key: 'other', count: 0 },
+    ]);
+    expect(data.recentAdmissions.map((p: { admissionDate: string }) => p.admissionDate)).toEqual([
+      daysAgo(0),
+      daysAgo(3),
+      daysAgo(40),
+      daysAgo(200),
+    ]);
+    expect(data.recentAdmissions[0]).toMatchObject({ age: 42, condition: 'Asthma', status: 'active', doctor: { id: busy.id, name: 'Dr. Busy' } });
   });
 
   it('uses weekly buckets for 90d and monthly buckets for 12m, matching the KPI', async () => {

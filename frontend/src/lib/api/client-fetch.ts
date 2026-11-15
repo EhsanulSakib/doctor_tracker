@@ -1,7 +1,7 @@
 import { toQueryString, type QueryParams } from "@/lib/utils";
-import { ApiError } from "./errors";
+import { ApiError, READ_ONLY_EVENT } from "./errors";
 
-type Method = "GET" | "POST" | "PATCH" | "DELETE";
+type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 export type ClientFetchInit = {
   method?: Method;
@@ -71,7 +71,12 @@ export async function clientFetch<T>(path: string, init: ClientFetchInit = {}): 
     }
   }
 
-  if (!res.ok) throw await ApiError.fromResponse(res);
+  if (!res.ok) {
+    const error = await ApiError.fromResponse(res);
+    // Demo account writing: one place announces it (a toast via <Toaster>), whichever screen asked.
+    if (error.code === "DEMO_READ_ONLY") window.dispatchEvent(new CustomEvent(READ_ONLY_EVENT, { detail: error.message }));
+    throw error;
+  }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }

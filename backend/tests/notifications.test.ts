@@ -265,7 +265,7 @@ describe('cleanup and failure isolation', () => {
     expect((await api.deletePatient(patient.id)).status).toBe(204);
     expect(await NotificationModel.countDocuments({ 'subject.id': patient.id })).toBe(0);
 
-    expect((await api.deleteDoctor(doctor.id)).status).toBe(204);
+    expect((await api.deleteDoctor(doctor.id)).status).toBe(200);
     expect(await NotificationModel.countDocuments()).toBe(0);
   });
 

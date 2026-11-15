@@ -20,14 +20,14 @@ export type DialogProps = {
   children?: ReactNode;
   /** Action buttons. A submit button here can target a form in the body with `form="<form id>"`. */
   footer?: ReactNode;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   /** Set false while saving: Escape, the backdrop and the close button stop closing it. */
   dismissible?: boolean;
   /** Focused on open; defaults to the first field/button in the body, then the dialog itself. */
   initialFocusRef?: RefObject<HTMLElement | null>;
 };
 
-const sizes = { sm: "sm:max-w-md", md: "sm:max-w-lg", lg: "sm:max-w-2xl" };
+const sizes = { sm: "sm:max-w-md", md: "sm:max-w-lg", lg: "sm:max-w-2xl", xl: "sm:max-w-4xl" };
 
 /** Modal dialog: bottom sheet on phones, centered panel from `sm`. */
 export function Dialog(props: DialogProps) {

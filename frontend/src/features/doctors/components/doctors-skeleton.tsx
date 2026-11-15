@@ -12,16 +12,18 @@ const noActions = () => null;
  */
 export function DoctorsListSkeleton() {
   return (
-    <div aria-hidden className="flex flex-col gap-3 lg:min-h-0 lg:flex-1">
+    <div aria-hidden className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <Skeleton className="h-9 min-w-0 flex-1 pointer-coarse:h-11 sm:max-w-80" />
-        <Skeleton className="hidden h-9 w-48 xl:block" />
+        <Skeleton className="hidden h-9 w-48 2xl:block" />
         <Skeleton className="hidden h-9 w-40 xl:block" />
+        <Skeleton className="hidden h-9 w-36 lg:block" />
         <Skeleton className="h-9 w-11 pointer-coarse:h-11 sm:w-24" />
-        <Skeleton className="ml-auto h-9 w-11 pointer-coarse:h-11 sm:w-32" />
+        <Skeleton className="ml-auto h-9 w-11 pointer-coarse:h-11 sm:w-24" />
+        <Skeleton className="h-9 w-11 pointer-coarse:h-11 sm:w-40" />
       </div>
-      <div className="flex min-h-0 flex-col">
-        <DataTable fill loading cardsBelow="lg" skeletonRows={10} columns={DOCTOR_COLUMNS} rows={[]} getRowId={() => ""} caption="Doctors" rowActions={noActions} />
+      <div className="flex flex-col">
+        <DataTable loading cardsBelow="xl" skeletonRows={10} columns={DOCTOR_COLUMNS} rows={[]} getRowId={() => ""} caption="Doctors" rowActions={noActions} />
       </div>
       <div className="flex shrink-0 flex-col-reverse items-center justify-between gap-3 sm:flex-row">
         <Skeleton className="h-8 w-60 pointer-coarse:h-10" />

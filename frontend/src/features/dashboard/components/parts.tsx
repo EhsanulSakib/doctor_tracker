@@ -6,20 +6,34 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { DASHBOARD_RANGES, RANGE_LABELS, type DashboardRange } from "../types";
 
-/**
- * A chart's frame: heading, one short factual takeaway computed from the data, and a body that takes the
- * rest of the card's height (on laptops the dashboard fills the screen, so cards share its height).
- */
 /** Entrance: cards rise in one after another (`delay` in ms); transform + opacity only, so no layout shift. */
 const entrance = (delay: number) => ({ "data-entrance": "", style: { animationDelay: `${delay}ms` } });
 
-export function ChartCard({ title, takeaway, delay = 0, className, children }: { title: string; takeaway?: ReactNode; delay?: number; className?: string; children: ReactNode }) {
+/** A chart's frame: a heading and a body that takes the rest of the card's height. */
+export function ChartCard({
+  title,
+  icon,
+  aside,
+  delay = 0,
+  className,
+  children,
+}: {
+  title: string;
+  icon?: ReactNode;
+  /** Small text at the right end of the title row. */
+  aside?: ReactNode;
+  delay?: number;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
-    <Card {...entrance(delay)} className={cn("flex min-h-0 flex-col p-4 motion-safe:animate-rise", className)}>
-      {/* One line (title left, takeaway right): on a laptop every pixel of height goes to the chart. */}
-      <div className="mb-2 flex h-5 shrink-0 items-baseline justify-between gap-3">
-        <h2 className="shrink-0 text-ui leading-5 font-semibold text-ink">{title}</h2>
-        {takeaway && <p className="min-w-0 truncate text-xs leading-4 text-ink-muted">{takeaway}</p>}
+    <Card {...entrance(delay)} className={cn("flex min-h-0 flex-col p-4 sm:p-5 motion-safe:animate-rise", className)}>
+      <div className="mb-4 flex shrink-0 items-center gap-3">
+        <h2 className="flex items-center gap-2 text-base leading-6 font-semibold tracking-tight text-ink">
+          {icon && <TitleIcon>{icon}</TitleIcon>}
+          {title}
+        </h2>
+        {aside && <div className="ml-auto min-w-0 text-right">{aside}</div>}
       </div>
       <div className="relative min-h-0 flex-1">{children}</div>
     </Card>
@@ -72,29 +86,49 @@ export function AnimatedNumber({ value, format }: { value: number; format: (n: n
 }
 
 /**
- * Stat tile layout, shared with the loading skeleton. When the tile is wide enough (`@kpi`, a container
- * query on the tile's own width, so the sidebar state counts too): label and context on the left, the
- * value on the right. Narrower tiles (phones, small laptops with the sidebar open) stack the three lines.
+ * Stat tile layout, shared with the loading skeleton: icon + label on the left; the value with its context
+ * line underneath, right-aligned.
  */
-export const KPI_TILE = "@container px-4 py-3";
-export const KPI_GRID = "relative grid @kpi:grid-cols-[minmax(0,1fr)_auto] @kpi:items-center @kpi:gap-x-3 @kpi:py-1";
-export const KPI_VALUE = "mt-1 @kpi:col-start-2 @kpi:row-span-2 @kpi:row-start-1 @kpi:mt-0 @kpi:justify-self-end";
-export const KPI_DETAIL = "mt-0.5 @kpi:col-start-1 @kpi:mt-1.5";
+export const KPI_TILE = "p-4 sm:p-5";
+export const KPI_GRID = "grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4";
+export const KPI_LABEL = "col-start-1 row-span-2 row-start-1 flex min-w-0 items-center gap-2";
+export const KPI_VALUE = "col-start-2 row-start-1 text-right";
+export const KPI_DETAIL = "col-start-2 row-start-2 mt-1 justify-end text-right";
 
-/** Stat tile: label, value (proportional figures at display size), and one line of context. */
-export function KpiTile({ label, value, format, detail, delay = 0 }: { label: ReactNode; value: number; format: (n: number) => string; detail: ReactNode; delay?: number }) {
+/** The plain icon in front of stat tile labels and chart card titles. */
+export function TitleIcon({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <span aria-hidden className={cn("flex shrink-0 items-center text-accent-fg", className)}>
+      {children}
+    </span>
+  );
+}
+
+/** Stat tile: icon and label, value (proportional figures at display size), and one line of context. */
+export function KpiTile({
+  icon,
+  label,
+  value,
+  format,
+  detail,
+  delay = 0,
+}: {
+  icon: ReactNode;
+  label: ReactNode;
+  value: number;
+  format: (n: number) => string;
+  detail: ReactNode;
+  delay?: number;
+}) {
   return (
     <Card {...entrance(delay)} className={cn(KPI_TILE, "motion-safe:animate-rise")}>
       <div className={KPI_GRID}>
-        <p className="truncate text-xs leading-4 font-medium text-ink-muted">{label}</p>
-        {/* No layout shift from a right-aligned number that changes width: a hidden copy of the final value
-            only reserves the space, and the visible number sits in a box that never moves (the value's own
-            box when stacked; the full width of the tile, right-aligned, when side by side). */}
-        <p className={cn(KPI_VALUE, "relative text-2xl leading-7 font-semibold tracking-tight text-ink @kpi:static @kpi:invisible @kpi:text-right")}>
-          <span className="invisible">{format(value)}</span>
-          <span className="visible absolute inset-0 @kpi:top-1/2 @kpi:bottom-auto @kpi:-translate-y-1/2">
-            <AnimatedNumber value={value} format={format} />
-          </span>
+        <div className={KPI_LABEL}>
+          <TitleIcon>{icon}</TitleIcon>
+          <p className="min-w-0 truncate text-sm leading-5 font-semibold text-ink-muted sm:text-base sm:leading-6">{label}</p>
+        </div>
+        <p className={cn(KPI_VALUE, "text-3xl leading-9 font-semibold tracking-tight text-ink tabular-nums")}>
+          <AnimatedNumber value={value} format={format} />
         </p>
         {/* Fixed 16px line: an inline icon + figure would otherwise grow the line box by a couple of pixels. */}
         <div className={cn(KPI_DETAIL, "flex h-4 items-center overflow-hidden text-xs leading-4 whitespace-nowrap text-ink-muted")}>

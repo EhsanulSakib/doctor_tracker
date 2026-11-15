@@ -47,4 +47,12 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * The demo account tried to write. client-fetch broadcasts this event and <Toaster> shows the toast,
+ * so callers only need `isReadOnlyError` to skip their own inline error.
+ */
+export const READ_ONLY_EVENT = "dt:read-only";
+
+export const isReadOnlyError = (error: unknown): boolean => error instanceof ApiError && error.code === "DEMO_READ_ONLY";
+
 export const isApiError = (error: unknown): error is ApiError => error instanceof ApiError;

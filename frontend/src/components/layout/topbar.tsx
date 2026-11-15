@@ -11,6 +11,10 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { mobileNavSet, selectBreadcrumbTail, selectMobileNavOpen } from "@/store/slices/ui";
 import { isActivePath, NAV_ITEMS } from "./nav-items";
 import { ThemeToggle } from "./theme-toggle";
+import { PROFILE_PATH } from "./user-menu";
+
+/** Pages outside the main navigation that still get a breadcrumb. */
+const EXTRA_SECTIONS = [{ href: PROFILE_PATH, label: "Profile" }] as const;
 
 /**
  * Top bar. Left: where you are (breadcrumb from `md`; menu button + page name on phones, since pages
@@ -22,7 +26,7 @@ export function Topbar({ userSlot }: { userSlot: ReactNode }) {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
   const mobileNavOpen = useAppSelector(selectMobileNavOpen);
-  const section = NAV_ITEMS.find((item) => isActivePath(pathname, item.href));
+  const section = [...NAV_ITEMS, ...EXTRA_SECTIONS].find((item) => isActivePath(pathname, item.href));
   // Only on a page below the section (e.g. /doctors/:id), and only once that page has set it.
   const tail = useAppSelector(selectBreadcrumbTail);
   const detail = section && pathname !== section.href ? tail : null;

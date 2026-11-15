@@ -25,8 +25,7 @@ export const update = handler({ params: idParamsSchema, body: updateDoctorSchema
 });
 
 export const remove = handler({ params: idParamsSchema }, async ({ params }, _req, res) => {
-  await doctorsService.deleteDoctor(params.id);
-  res.status(204).end();
+  res.json({ data: await doctorsService.deleteDoctor(params.id) });
 });
 
 export const hospitals = handler({}, async (_input, _req, res) => {

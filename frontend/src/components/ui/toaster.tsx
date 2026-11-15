@@ -2,10 +2,11 @@
 
 import { AnimatePresence, m } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { READ_ONLY_EVENT } from "@/lib/api/errors";
 import { toastMotion } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { selectToasts, toastDismissed, type Toast, type ToastTone } from "@/store/slices/toast";
+import { selectToasts, toastAdded, toastDismissed, type Toast, type ToastTone } from "@/store/slices/toast";
 import { IconButton } from "./icon-button";
 import { AlertCircleIcon, CheckCircleIcon, InfoIcon, XIcon } from "./icons";
 import { Portal } from "./portal";
@@ -22,8 +23,25 @@ const ICONS: Record<ToastTone, React.ReactNode> = {
 const announcement = (toast: Toast | undefined) => (toast ? `${toast.title}${toast.description ? `. ${toast.description}` : ""}` : "");
 
 export function Toaster() {
+  const dispatch = useAppDispatch();
   const toasts = useAppSelector(selectToasts);
   const latest = toasts.at(-1);
+
+  // The API rejected a write from the demo account (see lib/api/client-fetch.ts).
+  useEffect(() => {
+    const onReadOnly = (event: Event) => {
+      const message = (event as CustomEvent<string>).detail;
+      dispatch(
+        toastAdded({
+          tone: "info",
+          title: "View-only demo account",
+          description: message || "The demo admin can only view data. The main admin can add, edit and delete.",
+        }),
+      );
+    };
+    window.addEventListener(READ_ONLY_EVENT, onReadOnly);
+    return () => window.removeEventListener(READ_ONLY_EVENT, onReadOnly);
+  }, [dispatch]);
 
   return (
     <Portal>

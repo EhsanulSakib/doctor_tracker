@@ -1,9 +1,13 @@
 import type { Model, PipelineStage, Types } from 'mongoose';
 import {
   CONDITIONS,
+  DOCTOR_STATUSES,
+  GENDERS,
   PATIENT_STATUSES,
   SPECIALIZATIONS,
   type Condition,
+  type DoctorStatus,
+  type Gender,
   type PatientStatus,
   type Specialization,
 } from '../../constants/enums.js';
@@ -27,6 +31,12 @@ const RANGES: Record<DashboardRange, { unit: Unit; buckets: number }> = {
 };
 
 const TOP_DOCTORS_LIMIT = 10;
+const RECENT_ADMISSIONS_LIMIT = 6;
+
+/** Age bands for the age chart: `[min, max)` lower bounds, last one open-ended. */
+export const AGE_GROUPS = ['0-17', '18-34', '35-49', '50-64', '65+'] as const;
+export type AgeGroup = (typeof AGE_GROUPS)[number];
+const AGE_BOUNDARIES = [0, 18, 35, 50, 65, 200];
 const CACHE_TTL_MS = 60_000;
 
 type Breakdown<K extends string> = Array<{ key: K; count: number }>;
@@ -47,10 +57,23 @@ export type DashboardStats = {
   /** One entry per bucket (UTC start date, YYYY-MM-DD), including empty ones. */
   patientsOverTime: Array<{ bucket: string; count: number }>;
   /** Current caseload: doctors with the most assigned patients (all time). */
-  topDoctors: Array<{ id: string; name: string; specialization: Specialization; count: number }>;
+  topDoctors: Array<{ id: string; name: string; specialization: Specialization; photoUrl: string | null; count: number }>;
   byCondition: Breakdown<Condition>;
   byStatus: Breakdown<PatientStatus>;
   doctorsBySpecialization: Breakdown<Specialization>;
+  doctorsByStatus: Breakdown<DoctorStatus>;
+  byAgeGroup: Breakdown<AgeGroup>;
+  byGender: Breakdown<Gender>;
+  /** The latest admissions, newest first. `doctor` is null if the doctor was deleted. */
+  recentAdmissions: Array<{
+    id: string;
+    name: string;
+    age: number;
+    condition: Condition;
+    status: PatientStatus;
+    admissionDate: string;
+    doctor: { id: string; name: string } | null;
+  }>;
 };
 
 // ─── Dates (all UTC, like the stored admission dates) ────────────────────────────────────
@@ -119,7 +142,7 @@ async function topDoctors(): Promise<DashboardStats['topDoctors']> {
   const rows = await PatientModel.aggregate<{
     _id: Types.ObjectId;
     count: number;
-    doctor: { name: string; specialization: Specialization };
+    doctor: { name: string; specialization: Specialization; photoUrl?: string | null };
   }>([
     ...indexOrderedGroup('doctorId'),
     { $sort: { count: -1, _id: 1 } },
@@ -130,13 +153,47 @@ async function topDoctors(): Promise<DashboardStats['topDoctors']> {
         localField: '_id',
         foreignField: '_id',
         as: 'doctor',
-        pipeline: [{ $project: { _id: 0, name: 1, specialization: 1 } }],
+        pipeline: [{ $project: { _id: 0, name: 1, specialization: 1, photoUrl: 1 } }],
       },
     },
     { $unwind: '$doctor' }, // drops a group whose doctor no longer exists
   ]);
 
-  return rows.map((row) => ({ id: row._id.toString(), ...row.doctor, count: row.count }));
+  return rows.map((row) => ({
+    id: row._id.toString(),
+    name: row.doctor.name,
+    specialization: row.doctor.specialization,
+    photoUrl: row.doctor.photoUrl ?? null,
+    count: row.count,
+  }));
+}
+
+/** Newest admissions first (served by the `{ admissionDate: -1, _id: -1 }` index), with the doctor's name. */
+async function recentAdmissions(): Promise<DashboardStats['recentAdmissions']> {
+  const rows = await PatientModel.find({}, { name: 1, age: 1, condition: 1, status: 1, admissionDate: 1, doctorId: 1 })
+    .sort({ admissionDate: -1, _id: -1 })
+    .limit(RECENT_ADMISSIONS_LIMIT)
+    .populate<{ doctorId: { _id: Types.ObjectId; name: string } | null }>('doctorId', 'name')
+    .lean();
+
+  return rows.map((row) => ({
+    id: row._id.toString(),
+    name: row.name,
+    age: row.age,
+    condition: row.condition,
+    status: row.status,
+    admissionDate: isoDay(row.admissionDate),
+    doctor: row.doctorId ? { id: row.doctorId._id.toString(), name: row.doctorId.name } : null,
+  }));
+}
+
+/** Patients per age band, every band present (zeros included). */
+async function ageGroups(): Promise<Breakdown<AgeGroup>> {
+  const rows = await PatientModel.aggregate<{ _id: number; count: number }>([
+    { $bucket: { groupBy: '$age', boundaries: AGE_BOUNDARIES, default: 200, output: { count: { $sum: 1 } } } },
+  ]);
+  const counts = new Map(rows.map((row) => [row._id, row.count]));
+  return AGE_GROUPS.map((key, i) => ({ key, count: counts.get(AGE_BOUNDARIES[i]!) ?? 0 }));
 }
 
 /** `{ value: count }` for one field across the whole collection. */
@@ -171,6 +228,10 @@ async function computeStats(range: DashboardRange): Promise<DashboardStats> {
     conditionCounts,
     statusCounts,
     specializationCounts,
+    doctorStatusCounts,
+    genderCounts,
+    ages,
+    recent,
   ] = await Promise.all([
     DoctorModel.estimatedDocumentCount(), // collection metadata: no scan
     DoctorModel.countDocuments({ status: 'active' }),
@@ -182,6 +243,10 @@ async function computeStats(range: DashboardRange): Promise<DashboardStats> {
     countBy(PatientModel, 'condition'),
     countBy(PatientModel, 'status'),
     countBy(DoctorModel, 'specialization'),
+    countBy(DoctorModel, 'status'),
+    countBy(PatientModel, 'gender'),
+    ageGroups(),
+    recentAdmissions(),
   ]);
 
   return {
@@ -200,6 +265,10 @@ async function computeStats(range: DashboardRange): Promise<DashboardStats> {
     byCondition: toBreakdown(CONDITIONS, conditionCounts, true),
     byStatus: toBreakdown(PATIENT_STATUSES, statusCounts, false),
     doctorsBySpecialization: toBreakdown(SPECIALIZATIONS, specializationCounts, true),
+    doctorsByStatus: toBreakdown(DOCTOR_STATUSES, doctorStatusCounts, false),
+    byAgeGroup: ages,
+    byGender: toBreakdown(GENDERS, genderCounts, false),
+    recentAdmissions: recent,
   };
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { m, type Variants } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -8,12 +9,14 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
-import { AlertCircleIcon, EyeIcon, EyeOffIcon } from "@/components/ui/icons";
+import { EyeIcon, EyeOffIcon } from "@/components/ui/icons";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import { clientFetch } from "@/lib/api/client-fetch";
 import { isApiError } from "@/lib/api/errors";
 import type { ApiData, PublicUser } from "@/lib/api/types";
 import { safeNextPath } from "@/lib/auth/session";
+import { EASE_OUT } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { useAppDispatch } from "@/store/hooks";
 import { userLoaded } from "@/store/slices/auth";
@@ -24,6 +27,7 @@ const loginSchema = z.object({
 });
 
 type LoginValues = z.infer<typeof loginSchema>;
+type Pending = "password" | "demo" | null;
 
 /** API error codes → what the person should read. */
 function messageFor(code: string, fallback: string): string {
@@ -39,12 +43,23 @@ function messageFor(code: string, fallback: string): string {
   }
 }
 
+const stagger: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.06, delayChildren: 0.12 } },
+};
+
+const rise: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE_OUT } },
+};
+
 export function LoginForm({ className }: { className?: string }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const [formError, setFormError] = useState<string | null>(null);
+  const toast = useToast();
   const [showPassword, setShowPassword] = useState(false);
-  const [redirecting, setRedirecting] = useState(false);
+  const [redirecting, setRedirecting] = useState<Pending>(null);
+  const [demoPending, setDemoPending] = useState(false);
 
   const {
     register,
@@ -60,67 +75,111 @@ export function LoginForm({ className }: { className?: string }) {
     reValidateMode: "onChange",
   });
 
+  const busy = isSubmitting || demoPending || redirecting !== null;
+
+  const enterApp = (user: PublicUser, via: Exclude<Pending, null>) => {
+    dispatch(userLoaded(user));
+    setRedirecting(via);
+    // Read ?next= at submit time (no useSearchParams, so the page stays fully static); same-site paths only.
+    router.replace(safeNextPath(new URLSearchParams(window.location.search).get("next")));
+  };
+
+  const showError = (error: unknown) => {
+    if (!isApiError(error)) throw error;
+    toast.error("Couldn't sign in", messageFor(error.code, error.message));
+  };
+
   const onSubmit = handleSubmit(async (values) => {
-    setFormError(null);
     try {
       const { data } = await clientFetch<ApiData<{ user: PublicUser }>>("/auth/login", { method: "POST", body: values });
-      dispatch(userLoaded(data.user));
-      setRedirecting(true);
-      // Read ?next= at submit time (no useSearchParams, so the page stays fully static); same-site paths only.
-      router.replace(safeNextPath(new URLSearchParams(window.location.search).get("next")));
+      enterApp(data.user, "password");
     } catch (error) {
-      if (!isApiError(error)) throw error;
-      if (error.code === "VALIDATION_ERROR") {
+      if (isApiError(error) && error.code === "VALIDATION_ERROR") {
         for (const [field, message] of Object.entries(error.fieldErrors)) {
           if (field === "email" || field === "password") setError(field, { message });
         }
         return;
       }
-      setFormError(messageFor(error.code, error.message));
+      showError(error);
       // Ready to retype: select the password so typing replaces it.
-      if (error.code === "INVALID_CREDENTIALS") setFocus("password", { shouldSelect: true });
+      if (isApiError(error) && error.code === "INVALID_CREDENTIALS") setFocus("password", { shouldSelect: true });
     }
   });
 
+  const onDemo = async () => {
+    setDemoPending(true);
+    try {
+      const { data } = await clientFetch<ApiData<{ user: PublicUser }>>("/auth/demo", { method: "POST" });
+      toast.info(
+        "Signed in as the demo admin",
+        "View only: you can browse everything, but adding, editing and deleting is blocked. The main admin can view, add, edit and delete.",
+      );
+      enterApp(data.user, "demo");
+    } catch (error) {
+      showError(error);
+    } finally {
+      setDemoPending(false);
+    }
+  };
+
   return (
-    <form onSubmit={onSubmit} noValidate className={cn("grid gap-5", className)}>
-      {formError && (
-        <div role="alert" className="flex items-start gap-2.5 rounded-control border border-danger/30 bg-danger-soft px-3 py-2.5 text-sm text-danger">
-          <AlertCircleIcon size={16} className="mt-0.5 shrink-0" />
-          <span>{formError}</span>
-        </div>
-      )}
+    <m.form onSubmit={onSubmit} noValidate variants={stagger} initial="hidden" animate="visible" className={cn("grid gap-5", className)}>
+      <m.div variants={rise}>
+        <Field label="Email" error={errors.email?.message}>
+          {(control) => (
+            <Input {...control} {...register("email")} type="email" inputMode="email" autoComplete="username" placeholder="name@example.com" />
+          )}
+        </Field>
+      </m.div>
 
-      <Field label="Email" error={errors.email?.message}>
-        {(control) => (
-          <Input {...control} {...register("email")} type="email" inputMode="email" autoComplete="username" placeholder="name@example.com" />
-        )}
-      </Field>
+      <m.div variants={rise}>
+        <Field label="Password" error={errors.password?.message}>
+          {(control) => (
+            <Input
+              {...control}
+              {...register("password")}
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              trailing={
+                <IconButton
+                  label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                  icon={showPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+                  size="sm"
+                  className="size-7 pointer-coarse:size-9"
+                  onClick={() => setShowPassword((shown) => !shown)}
+                />
+              }
+            />
+          )}
+        </Field>
+      </m.div>
 
-      <Field label="Password" error={errors.password?.message}>
-        {(control) => (
-          <Input
-            {...control}
-            {...register("password")}
-            type={showPassword ? "text" : "password"}
-            autoComplete="current-password"
-            trailing={
-              <IconButton
-                label={showPassword ? "Hide password" : "Show password"}
-                aria-pressed={showPassword}
-                icon={showPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
-                size="sm"
-                className="size-7 pointer-coarse:size-9"
-                onClick={() => setShowPassword((shown) => !shown)}
-              />
-            }
-          />
-        )}
-      </Field>
+      <m.div variants={rise} className="mt-1">
+        <Button type="submit" size="lg" fullWidth loading={isSubmitting || redirecting === "password"} disabled={busy}>
+          {redirecting === "password" ? "Signing in…" : "Sign in"}
+        </Button>
+      </m.div>
 
-      <Button type="submit" size="lg" fullWidth loading={isSubmitting || redirecting} className="mt-1">
-        {redirecting ? "Signing in…" : "Sign in"}
-      </Button>
-    </form>
+      <m.div variants={rise} className="flex items-center gap-3 text-caption font-medium uppercase tracking-wider text-ink-subtle">
+        <span className="h-px flex-1 bg-line" />
+        or
+        <span className="h-px flex-1 bg-line" />
+      </m.div>
+
+      <m.div variants={rise}>
+        <Button
+          variant="secondary"
+          size="lg"
+          fullWidth
+          icon={<EyeIcon size={18} />}
+          loading={demoPending || redirecting === "demo"}
+          disabled={busy}
+          onClick={onDemo}
+        >
+          {redirecting === "demo" ? "Opening demo…" : "Demo login"}
+        </Button>
+      </m.div>
+    </m.form>
   );
 }

@@ -1,7 +1,6 @@
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
-import { PatientModel } from '../src/modules/patients/patient.model.js';
 import { doctorPayload, insertPatients, loginAsAdmin } from './helpers.js';
 
 const app = createApp();
@@ -209,18 +208,44 @@ describe('PATCH /api/doctors/:id', () => {
 });
 
 describe('DELETE /api/doctors/:id', () => {
-  it('refuses while the doctor has patients, then deletes once they are gone', async () => {
+  it('deletes the doctor and leaves their patients without a doctor (N/A)', async () => {
     const doctor = await createDoctor();
     await insertPatients(doctor.id, 2);
 
-    const blocked = await api.remove(doctor.id);
-    expect(blocked.status).toBe(409);
-    expect(blocked.body.error).toMatchObject({ code: 'DOCTOR_HAS_PATIENTS', details: { patientCount: 2 } });
+    const res = await api.remove(doctor.id);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ unassigned: 2 });
 
-    await PatientModel.deleteMany({ doctorId: doctor.id });
-
-    expect((await api.remove(doctor.id)).status).toBe(204);
     expect((await api.get(doctor.id)).status).toBe(404);
+    const list = await request(app).get('/api/patients').set('Cookie', cookie);
+    expect(list.body.meta.total).toBe(2);
+    expect(list.body.data.map((p: { doctorId: string | null; doctor: unknown }) => [p.doctorId, p.doctor])).toEqual([
+      [null, null],
+      [null, null],
+    ]);
+  });
+
+  it('lets an unassigned patient be given a new doctor', async () => {
+    const leaving = await createDoctor();
+    const next = await createDoctor();
+    await insertPatients(leaving.id, 1);
+    await api.remove(leaving.id);
+
+    const [patient] = (await request(app).get('/api/patients').set('Cookie', cookie)).body.data;
+    const res = await request(app).patch(`/api/patients/${patient.id}`).set('Cookie', cookie).send({ doctorId: next.id });
+    expect(res.status).toBe(200);
+    expect(res.body.data.doctor).toMatchObject({ id: next.id });
+  });
+
+  it('filters by chamber day and shift', async () => {
+    await createDoctor({ name: 'Dr. Morning', chamberDays: ['sat', 'mon'], chamberStart: '09:00', chamberEnd: '13:00' });
+    await createDoctor({ name: 'Dr. Evening', chamberDays: ['sun'], chamberStart: '18:00', chamberEnd: '21:00' });
+
+    const names = async (query: string) =>
+      (await request(app).get(`/api/doctors?${query}`).set('Cookie', cookie)).body.data.map((d: { name: string }) => d.name);
+    expect(await names('day=mon')).toEqual(['Dr. Morning']);
+    expect(await names('shift=evening')).toEqual(['Dr. Evening']);
+    expect(await names('day=sun&shift=morning')).toEqual([]);
   });
 
   it('returns 404 for an unknown doctor', async () => {

@@ -1,4 +1,4 @@
-import type { Condition, PatientStatus, Specialization } from "@/lib/constants";
+import type { Condition, DoctorStatus, Gender, PatientStatus, Specialization } from "@/lib/constants";
 
 /** `GET /api/dashboard/stats` (backend module 2.3). */
 export const DASHBOARD_RANGES = ["30d", "90d", "12m"] as const;
@@ -27,8 +27,23 @@ export type DashboardStats = {
   };
   /** Zero-filled; `bucket` is a UTC date `YYYY-MM-DD` (a day, the Monday of a week, or the 1st of a month). */
   patientsOverTime: { bucket: string; count: number }[];
-  topDoctors: { id: string; name: string; specialization: Specialization; count: number }[];
+  topDoctors: { id: string; name: string; specialization: Specialization; photoUrl: string | null; count: number }[];
   byCondition: { key: Condition; count: number }[];
   byStatus: { key: PatientStatus; count: number }[];
   doctorsBySpecialization: { key: Specialization; count: number }[];
+  doctorsByStatus: { key: DoctorStatus; count: number }[];
+  byAgeGroup: { key: AgeGroup; count: number }[];
+  byGender: { key: Gender; count: number }[];
+  /** Newest first; `doctor` is null if the doctor was deleted. */
+  recentAdmissions: {
+    id: string;
+    name: string;
+    age: number;
+    condition: Condition;
+    status: PatientStatus;
+    admissionDate: string;
+    doctor: { id: string; name: string } | null;
+  }[];
 };
+
+export type AgeGroup = "0-17" | "18-34" | "35-49" | "50-64" | "65+";

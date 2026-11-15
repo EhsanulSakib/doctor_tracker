@@ -39,7 +39,7 @@ const [sampleDoctor, samplePatient] = await Promise.all([
   DoctorModel.findOne().select('name').lean(),
   PatientModel.findOne().select('name doctorId').lean(),
 ]);
-const doctorId = samplePatient?.doctorId.toString() ?? '000000000000000000000000';
+const doctorId = samplePatient?.doctorId?.toString() ?? '000000000000000000000000';
 const doctorTerm = sampleDoctor?.name.split(' ').at(-1)?.toLowerCase() ?? 'aisha';
 const patientTerm = samplePatient?.name.split(' ')[0]?.toLowerCase() ?? 'maya';
 const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000);
