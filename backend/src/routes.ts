@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { isDbConnected } from './config/db.js';
 import { apiLimiter } from './middleware/rate-limit.js';
 import { authRouter } from './modules/auth/auth.routes.js';
+import { dashboardRouter } from './modules/dashboard/dashboard.routes.js';
 import { doctorsRouter } from './modules/doctors/doctors.routes.js';
 import { patientsRouter } from './modules/patients/patients.routes.js';
 
@@ -22,3 +23,4 @@ apiRouter.use(apiLimiter);
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/doctors', doctorsRouter);
 apiRouter.use('/patients', patientsRouter);
+apiRouter.use('/dashboard', dashboardRouter);

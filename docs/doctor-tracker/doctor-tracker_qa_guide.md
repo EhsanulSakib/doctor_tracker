@@ -7,9 +7,22 @@
 |---|---|
 | Backend URL (local) | `http://localhost:8082` |
 | Frontend URL (local) | `http://localhost:3000` |
-| MongoDB (dev) | MongoDB Atlas, URI in `backend/.env` (git-ignored). Reviewers can use `docker compose up -d` instead |
+| MongoDB (dev, working DB) | **local** MongoDB service, `MONGODB_URI=mongodb://127.0.0.1:27017/doctor_tracker` (since 2026-11-15). Reviewers can use `docker compose up -d` instead |
+| MongoDB (shared copy) | MongoDB Atlas, `SYNC_TARGET_URI` in `backend/.env` (git-ignored). Kept identical to local with `npm run db:sync -- --yes` |
 | MongoDB (tests) | mongodb-memory-server (in-memory, started per test file) |
 | Admin login | from `backend/.env` → `ADMIN_EMAIL` / `ADMIN_PASSWORD` (seeded) |
+
+### Database workflow
+| Task | Command (from `backend/`) |
+|---|---|
+| Demo data (replaces doctors + patients, upserts the admin) | `npm run seed` |
+| See what a sync would change | `npm run db:sync` (preview, writes nothing) |
+| Push local → Atlas | `npm run db:sync -- --yes` |
+| Pull Atlas → local | `npm run db:sync -- --pull --yes` |
+| Run one command against Atlas instead of local | prefix it with `MONGODB_URI="$(grep '^SYNC_TARGET_URI=' .env \| cut -d= -f2-)"` (a shell variable wins over `.env`) |
+
+Sync copies `users`, `doctors`, `patients` exactly (same `_id`s) and the schema indexes; refresh tokens are not copied (the destination's sessions are cleared).
+**This network:** Node can't resolve `mongodb+srv://` addresses through the router (`querySrv EBADRESP`), so `SYNC_TARGET_URI` uses Atlas's standard `mongodb://host1,host2,host3` form. The original SRV string is kept as a comment in `.env` for Render.
 
 ## Conventions
 - Cookie jar for curl: `-c jar.txt -b jar.txt`
@@ -109,10 +122,29 @@ Setup: log in with a cookie jar (§ 1.2 step 3) and create two doctors (§ 2.1 s
 | 21 | Operator keys | `curl -g -b $J "$B/api/patients?doctorId[\$ne]=x&condition[\$in]=Asthma"` | `200`, filters ignored (all patients) |
 | 22 | Index usage | `cd backend && npm run db:explain` | every line starts with `✓ index`; the 8 `patients:` lines use `doctorId_…`, `admissionDate_…`, `searchKey_1`, `condition_…`, `status_…`, `name_1__id_1` |
 
-**Result 2026-11-15:** scenarios 1–21 passed against a local throwaway MongoDB 8.2 (this clone had no `backend/.env`, so not Atlas); `db:explain` on 402 patients / 14 doctors: every query uses an index. `npm test` 70/70.
+**Result 2026-11-15:** scenarios 1–21 passed against a local throwaway MongoDB 8.2, then again against **Atlas** (8.0.37, test patients deleted afterwards); `db:explain` on 402 patients / 14 doctors: every query uses an index. `npm test` 70/70.
+
+### 2.3 Dashboard API + seed
+Setup: `cd backend && npm run seed` → `Seeded 127.0.0.1/doctor_tracker · doctors 15 (11 active) · patients 200, admitted <1st of the month 11 months ago> → <yesterday or today>`. Start the API, log in (§ 1.2 step 3).
+
+| # | Scenario | Command | Expected |
+|---|---|---|---|
+| 1 | Seed is repeatable | run `npm run seed` twice, compare doctors/patients | identical names, emails, conditions, dates (fixed faker seed; dates move with today) |
+| 2 | No session | `curl -i $B/api/dashboard/stats` | `401` |
+| 3 | Bad range | `?range=7d` | `400`, `range: Use 30d, 90d or 12m` |
+| 4 | 30d | `curl -b $J "$B/api/dashboard/stats?range=30d"` | 30 daily buckets ending today, empty days as `0`; `sum(patientsOverTime) = kpis.newPatients.current`; `deltaPct` vs the 30 days before |
+| 5 | 90d | `?range=90d` | 13 weekly buckets, each a Monday; sum = `newPatients.current` |
+| 6 | 12m | `?range=12m` | 12 monthly buckets (`YYYY-MM-01`); `current` = 200, `previous` = 0, `deltaPct: null` |
+| 7 | Breakdowns | any range | `byCondition` (11 keys, most first), `byStatus` (`active`, `under_treatment`, `recovered` in that order), `doctorsBySpecialization` (10 keys), `topDoctors` ≤ 10 with names |
+| 8 | Cache | call the same range twice | second call ~2 ms, same `generatedAt` |
+| 9 | Cache cleared on write | create / edit / delete a patient or doctor, call again | new `generatedAt`, updated numbers |
+| 10 | Index usage | `npm run db:explain` | 22 lines, all `✓ index`; the 7 `dashboard:` lines read 0 documents (`COUNT_SCAN` / `PROJECTION_COVERED`) |
+| 11 | Sync to Atlas | `npm run db:sync -- --yes`, then `npm run db:sync` | preview shows equal counts on both sides (users 1, doctors 15, patients 200) |
+
+**Result 2026-11-15:** all passed on the local DB (MongoDB 8.3.1) and, after `db:sync`, on Atlas (8.0.37): document-by-document hash of users / doctors / patients identical on both, same indexes. Stats on Atlas: cold ≈ 0.43 s (10 queries in parallel over the network), cached ≈ 2 ms. `npm test` 78/78.
 
 ## Edge-case checklist (global)
-- [x] Every protected endpoint returns 401 without a cookie (`/api/auth/me`, `/api/doctors/*`, `/api/patients/*`)
+- [x] Every protected endpoint returns 401 without a cookie (`/api/auth/me`, `/api/doctors/*`, `/api/patients/*`, `/api/dashboard/*`)
 - [x] Invalid ObjectId in a path → 400, not 500
 - [x] Unknown route → 404 with error shape
 - [x] Malformed JSON body → 400 with error shape

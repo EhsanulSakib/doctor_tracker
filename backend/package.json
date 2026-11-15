@@ -14,8 +14,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "seed": "tsx src/scripts/seed.ts",
     "seed:admin": "tsx src/scripts/seed-admin.ts",
-    "db:explain": "tsx src/scripts/explain-queries.ts"
+    "db:explain": "tsx src/scripts/explain-queries.ts",
+    "db:sync": "tsx src/scripts/db-sync.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -31,6 +33,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.6.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",

@@ -4,6 +4,7 @@ import { HttpError } from '../../lib/http-error.js';
 import { paginate, toSkip, type Paginated } from '../../lib/pagination.js';
 import { endOfDay, startOfDay } from '../../lib/schemas.js';
 import { searchKeyFilter } from '../../lib/search-key.js';
+import { clearDashboardCache } from '../dashboard/dashboard.service.js';
 import { PatientModel } from '../patients/patient.model.js';
 import { DoctorModel } from './doctor.model.js';
 import type { CreateDoctorInput, DoctorSort, ListDoctorsQuery, UpdateDoctorInput } from './doctors.schema.js';
@@ -131,6 +132,7 @@ export async function getDoctor(id: string): Promise<DoctorDto> {
 
 export async function createDoctor(input: CreateDoctorInput): Promise<DoctorDto> {
   const doctor = await DoctorModel.create(input);
+  clearDashboardCache();
   return toDoctorDto(doctor.toObject<DoctorRecord>(), 0);
 }
 
@@ -139,6 +141,7 @@ export async function updateDoctor(id: string, input: UpdateDoctorInput): Promis
   const doctor = await findDoctorOrThrow(id);
   doctor.set(input);
   await doctor.save();
+  clearDashboardCache();
 
   const patientCount = await PatientModel.countDocuments({ doctorId: doctor._id });
   return toDoctorDto(doctor.toObject<DoctorRecord>(), patientCount);
@@ -157,6 +160,7 @@ export async function deleteDoctor(id: string): Promise<void> {
 
   const deleted = await DoctorModel.findByIdAndDelete(id);
   if (!deleted) throw HttpError.notFound('Doctor');
+  clearDashboardCache();
 }
 
 export async function listHospitals(): Promise<string[]> {

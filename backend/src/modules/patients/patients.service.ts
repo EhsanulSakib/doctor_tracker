@@ -4,6 +4,7 @@ import { HttpError } from '../../lib/http-error.js';
 import { paginate, toSkip, type Paginated } from '../../lib/pagination.js';
 import { endOfDay, startOfDay } from '../../lib/schemas.js';
 import { searchKeyFilter } from '../../lib/search-key.js';
+import { clearDashboardCache } from '../dashboard/dashboard.service.js';
 import { DoctorModel } from '../doctors/doctor.model.js';
 import { PatientModel } from './patient.model.js';
 import type {
@@ -137,6 +138,7 @@ function findPage(q: ListPatientsQuery) {
 
 async function insertPatient(input: CreateDoctorPatientInput, doctor: DoctorSummary): Promise<PatientDto> {
   const patient = await PatientModel.create({ ...input, doctorId: doctor.id });
+  clearDashboardCache();
   return toPatientDto(patient.toObject<PatientRecord>(), doctor);
 }
 
@@ -198,6 +200,7 @@ export async function updatePatient(id: string, input: UpdatePatientInput): Prom
   // A cleared optional field arrives as `undefined`, which save() turns into $unset.
   patient.set(input);
   await patient.save();
+  clearDashboardCache();
 
   const doctor = newDoctor ?? (await findDoctorSummary(patient.doctorId));
   return toPatientDto(patient.toObject<PatientRecord>(), doctor);
@@ -206,4 +209,5 @@ export async function updatePatient(id: string, input: UpdatePatientInput): Prom
 export async function deletePatient(id: string): Promise<void> {
   const { deletedCount } = await PatientModel.deleteOne({ _id: id });
   if (deletedCount === 0) throw HttpError.notFound('Patient');
+  clearDashboardCache();
 }

@@ -11,6 +11,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(8082),
   MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
+  // Only used by `npm run db:sync`: the database kept in sync with MONGODB_URI.
+  SYNC_TARGET_URI: z.string().min(1).optional(),
   FRONTEND_URL: z.url().default('http://localhost:3000'),
 
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),

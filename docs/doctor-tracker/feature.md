@@ -1,12 +1,12 @@
 # Doctor Tracker — Feature Spec (living document)
 
-> Updated **only** when a module passes verification. Last updated: 2026-11-15 (module 2.2 verified).
+> Updated **only** when a module passes verification. Last updated: 2026-11-15 (module 2.3 verified; milestone 2 complete).
 
 ## Overview
 Doctor Tracker is a secure admin portal for managing doctors and the patients assigned to them, with an analytics dashboard.
 - **frontend/** — Next.js 16 (App Router, TypeScript, Tailwind CSS 4, Framer Motion via `motion`, Redux Toolkit, Recharts)
 - **backend/** — Express 5 + Mongoose 9 (TypeScript), REST API
-- **Database** — MongoDB (local via docker-compose, Atlas in production)
+- **Database** — MongoDB: local for development (Windows service or docker-compose), Atlas as the shared copy / production. `npm run db:sync` keeps them identical
 - **Hosting** — Vercel (frontend) · Render (backend) · MongoDB Atlas
 
 ## How these docs are organized
@@ -42,7 +42,8 @@ Doctor Tracker is a secure admin portal for managing doctors and the patients as
 | 1.1 Project scaffold | 2026-11-14 | Repo + Express 5 / TypeScript backend: validated env, pino logging, unified error shape, Zod `handler()` wrapper, helmet, CORS allowlist, 10kb body cap, rate limiting, Atlas connection, graceful shutdown, fail-fast on busy port. 6 automated tests + manual curl checks |
 | 1.2 Auth API | 2026-11-14 | Seeded admin, bcrypt login, 15-min JWT access token + rotating 7-day refresh token in httpOnly/Lax cookies, atomic rotation with reuse detection (10 s grace), logout revokes the session family, `requireAuth` / `requireRole`, login brute-force limit. 16 automated tests + manual flow on Atlas |
 | 2.1 Doctors API | 2026-11-14 | Doctor + Patient models with ESR indexes, doctor CRUD, indexed prefix search (`searchKey`), 5 filters + 8 sorts, page-number pagination (parallel find + count), patient counts in one `$group`, delete guard, hospitals + options lookups, `npm run db:explain`. 22 automated tests + 16 manual checks |
-| 2.2 Patients API | 2026-11-15 | Patient CRUD with doctor reassignment, indexed search, 6 filters + 5 sorts, pagination, each row's doctor via one `$in` query, nested `/api/doctors/:id/patients` (list + create, doctor lookup in parallel), clearable `email`/`notes`, 404 `DOCTOR_NOT_FOUND` for unknown body doctors, name-sort index. 26 automated tests (70 total) + 21 manual checks; every patient query uses an index |
+| 2.2 Patients API | 2026-11-15 | Patient CRUD with doctor reassignment, indexed search, 6 filters + 5 sorts, pagination, each row's doctor via one `$in` query, nested `/api/doctors/:id/patients` (list + create, doctor lookup in parallel), clearable `email`/`notes`, 404 `DOCTOR_NOT_FOUND` for unknown body doctors, name-sort index. 26 automated tests (70 total) + 21 manual checks (local and Atlas); every patient query uses an index |
+| 2.3 Dashboard API + seed | 2026-11-15 | `GET /api/dashboard/stats?range=30d\|90d\|12m`: KPIs with delta vs previous period, zero-filled time series (bucket-aligned windows, sum = KPI), top-10 doctors, condition / status / specialization breakdowns; 10 parallel index-only queries (0 documents read); 60 s promise cache cleared on writes. Repeatable faker seed (15 doctors, 200 patients). Local MongoDB as the working DB + `npm run db:sync` to Atlas. 8 automated tests (78 total), verified on local and Atlas |
 
 ## Current API surface
 Base URL (local): `http://localhost:8082`
@@ -71,7 +72,16 @@ Base URL (local): `http://localhost:8082`
 | PATCH | `/api/patients/:id` | admin | partial update; `doctorId` reassigns; `email`/`notes` = `""` or `null` clears |
 | DELETE | `/api/patients/:id` | admin | 204 · 404 |
 
-Seed the admin: `cd backend && npm run seed:admin` (uses `ADMIN_NAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`). Check index usage: `npm run db:explain`.
+| GET | `/api/dashboard/stats` | admin | `?range=30d\|90d\|12m` (default 30d) → `{ range, generatedAt, period, kpis, patientsOverTime, topDoctors, byCondition, byStatus, doctorsBySpecialization }`, cached 60 s |
+
+Scripts (from `backend/`):
+| Script | What it does |
+|---|---|
+| `npm run seed` | upserts the admin, replaces doctors + patients with 15 / 200 repeatable demo records (refuses `NODE_ENV=production` without `--force`) |
+| `npm run seed:admin` | only the admin (uses `ADMIN_NAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`) |
+| `npm run db:explain` | the index behind each list and dashboard query (22) |
+| `npm run db:sync` | preview; `-- --yes` pushes local → Atlas (`SYNC_TARGET_URI`), `-- --pull --yes` pulls |
 
 ## Known issues
-_None._
+- **SRV lookups fail on this office network.** Node's resolver gets a malformed answer from the router for `mongodb+srv://` addresses (`querySrv EBADRESP`). Workaround in place: `SYNC_TARGET_URI` uses Atlas's standard `mongodb://host1,host2,host3` string. On Render, the SRV string works.
+- The dashboard cache is per process (fine for one instance; use Redis if the API is scaled out).

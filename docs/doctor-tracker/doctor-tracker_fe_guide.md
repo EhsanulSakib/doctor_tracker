@@ -60,6 +60,18 @@ Next.js 16 App Router · TypeScript · Tailwind CSS 4 · `motion` (Framer Motion
 | Delete | `DELETE /api/patients/:id` → 204 (hard delete; confirm first). Afterwards `router.refresh()` also updates the doctor's `patientCount` |
 | Enum values | `CONDITIONS`, `PATIENT_STATUSES` (`active`, `under_treatment`, `recovered`), `GENDERS` (`male`, `female`, `other`) |
 
+## Backend dashboard contract (built in module 2.3)
+| Thing | Value |
+|---|---|
+| Endpoint | `GET /api/dashboard/stats?range=30d\|90d\|12m` (default `30d`) → `{ data: DashboardStats }`; 400 for other ranges |
+| Shape | `{ range, generatedAt, period: { unit, from, to, previousFrom }, kpis: { totalDoctors, activeDoctors, totalPatients, newPatients: { current, previous, deltaPct }, avgPatientsPerDoctor }, patientsOverTime: [{ bucket, count }], topDoctors: [{ id, name, specialization, count }], byCondition: [{ key, count }], byStatus: [{ key, count }], doctorsBySpecialization: [{ key, count }] }` |
+| Buckets | `30d` → 30 days, `90d` → 13 weeks (each bucket = its Monday), `12m` → 12 months (`YYYY-MM-01`). `bucket` is a UTC date string `YYYY-MM-DD`; format labels by `period.unit` (e.g. "Oct 17", "Week of Aug 17", "Dec 2025"). Empty buckets are included with 0, so plot the array as-is |
+| Delta | `deltaPct` has one decimal and can be negative; **`null` when there is no previous data** (show "—", never ∞). `12m` is `null` with the seed data |
+| Range vs snapshot | only `newPatients` and `patientsOverTime` follow the range; totals, top doctors and breakdowns describe all current data. Label the cards accordingly |
+| Breakdowns | every enum value is present (zeros too), so map colors by `key`. `byStatus` order is fixed (`active`, `under_treatment`, `recovered`); the others are sorted by count |
+| Freshness | cached up to 60 s, cleared by any doctor / patient write through the API; `generatedAt` says when the numbers were computed |
+| Demo data | `npm run seed` → 15 doctors (11 active), 200 patients over the last 12 months |
+
 ## State (Redux Toolkit) _(planned)_
 - `ui` slice — sidebar collapsed, theme, open dialog descriptor
 - `auth` slice — current user (hydrated from the protected layout)

@@ -1,6 +1,6 @@
 /**
- * Prints how MongoDB executes the main list queries: which index it picks and how many
- * keys/documents it reads. Usage: npm run db:explain
+ * Prints how MongoDB executes the main list and dashboard queries: which index it picks and how
+ * many keys/documents it reads. Usage: npm run db:explain (most useful after npm run seed)
  */
 import { connectDb, disconnectDb } from '../config/db.js';
 import { DoctorModel } from '../modules/doctors/doctor.model.js';
@@ -8,12 +8,17 @@ import { PatientModel } from '../modules/patients/patient.model.js';
 import { searchKeyFilter } from '../lib/search-key.js';
 
 type PlanNode = { stage: string; indexName?: string; inputStage?: PlanNode; inputStages?: PlanNode[] };
+type Planner = {
+  winningPlan: PlanNode & { queryPlan?: PlanNode };
+  rejectedPlans: Array<PlanNode & { queryPlan?: PlanNode }>;
+};
+type Stats = { nReturned: number; totalKeysExamined: number; totalDocsExamined: number; executionTimeMillis: number };
+// find() explains have the plan at the top; an aggregation that MongoDB can't run entirely inside
+// the query engine nests it under its first stage ($cursor).
 type ExplainResult = {
-  queryPlanner: {
-    winningPlan: PlanNode & { queryPlan?: PlanNode };
-    rejectedPlans: Array<PlanNode & { queryPlan?: PlanNode }>;
-  };
-  executionStats: { nReturned: number; totalKeysExamined: number; totalDocsExamined: number; executionTimeMillis: number };
+  queryPlanner?: Planner;
+  executionStats?: Stats;
+  stages?: Array<{ $cursor?: { queryPlanner: Planner; executionStats: Stats } }>;
 };
 
 function describePlan(node: PlanNode | undefined): string {
@@ -28,35 +33,61 @@ type Explainable = { explain: (verbosity: 'executionStats') => Promise<unknown> 
 await connectDb();
 await Promise.all([DoctorModel.init(), PatientModel.init()]);
 
-// A doctor who has patients makes the per-doctor plans meaningful; falls back to a dummy id on an empty DB.
-const samplePatient = await PatientModel.findOne().select('doctorId').lean();
+// Real values make the plans meaningful (keys examined > 0); fall back to fixed ones on an empty DB.
+const [sampleDoctor, samplePatient] = await Promise.all([
+  DoctorModel.findOne().select('name').lean(),
+  PatientModel.findOne().select('name doctorId').lean(),
+]);
 const doctorId = samplePatient?.doctorId.toString() ?? '000000000000000000000000';
+const doctorTerm = sampleDoctor?.name.split(' ').at(-1)?.toLowerCase() ?? 'aisha';
+const patientTerm = samplePatient?.name.split(' ')[0]?.toLowerCase() ?? 'maya';
+const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000);
+const groupBy = (field: string) => [{ $sort: { [field]: 1 as const } }, { $group: { _id: `$${field}`, count: { $sum: 1 } } }];
 
 const queries: Array<[string, Explainable]> = [
   ['doctors: default list (newest first)', DoctorModel.find({}).sort({ createdAt: -1, _id: -1 }).limit(10)],
-  ['doctors: search "aisha"', DoctorModel.find({ searchKey: searchKeyFilter('aisha') }).sort({ createdAt: -1, _id: -1 }).limit(10)],
+  [`doctors: search "${doctorTerm}"`, DoctorModel.find({ searchKey: searchKeyFilter(doctorTerm) }).sort({ createdAt: -1, _id: -1 }).limit(10)],
   ['doctors: specialization filter', DoctorModel.find({ specialization: 'Cardiology' }).sort({ createdAt: -1, _id: -1 }).limit(10)],
   ['doctors: status filter', DoctorModel.find({ status: 'active' }).sort({ createdAt: -1, _id: -1 }).limit(10)],
-  ['doctors: hospital filter', DoctorModel.find({ hospital: 'City General' }).sort({ createdAt: -1, _id: -1 }).limit(10)],
+  ['doctors: hospital filter', DoctorModel.find({ hospital: 'Lakeview Hospital' }).sort({ createdAt: -1, _id: -1 }).limit(10)],
   ['doctors: joined date range', DoctorModel.find({ joinedAt: { $gte: new Date('2024-01-01') } }).sort({ joinedAt: -1, _id: -1 }).limit(10)],
   ['doctors: sort by name', DoctorModel.find({}).sort({ name: 1, _id: 1 }).limit(10)],
   ['patients: by doctor (delete guard / counts)', PatientModel.find({ doctorId }).limit(1)],
   ['patients: default list (newest admission)', PatientModel.find({}).sort({ admissionDate: -1, _id: -1 }).limit(10)],
-  ['patients: search "maya"', PatientModel.find({ searchKey: searchKeyFilter('maya') }).sort({ admissionDate: -1, _id: -1 }).limit(10)],
+  [`patients: search "${patientTerm}"`, PatientModel.find({ searchKey: searchKeyFilter(patientTerm) }).sort({ admissionDate: -1, _id: -1 }).limit(10)],
   ["patients: one doctor's list", PatientModel.find({ doctorId }).sort({ admissionDate: -1, _id: -1 }).limit(10)],
   ['patients: condition filter', PatientModel.find({ condition: 'Asthma' }).sort({ admissionDate: -1, _id: -1 }).limit(10)],
   ['patients: status filter', PatientModel.find({ status: 'under_treatment' }).sort({ admissionDate: -1, _id: -1 }).limit(10)],
   ['patients: admission date range', PatientModel.find({ admissionDate: { $gte: new Date('2026-01-01') } }).sort({ admissionDate: -1, _id: -1 }).limit(10)],
   ['patients: sort by name', PatientModel.find({}).sort({ name: 1, _id: 1 }).limit(10)],
+  // countDocuments() can't be explained directly; it runs as $match + count, which is what these show.
+  ['dashboard: active doctors (count)', DoctorModel.aggregate([{ $match: { status: 'active' } }, { $count: 'n' }])],
+  ['dashboard: new patients, 30d (count)', PatientModel.aggregate([{ $match: { admissionDate: { $gte: thirtyDaysAgo } } }, { $count: 'n' }])],
+  [
+    'dashboard: patients over time (30d)',
+    PatientModel.aggregate([
+      { $match: { admissionDate: { $gte: thirtyDaysAgo } } },
+      { $group: { _id: { $dateTrunc: { date: '$admissionDate', unit: 'day', timezone: 'UTC' } }, count: { $sum: 1 } } },
+    ]),
+  ],
+  ['dashboard: top doctors (group by doctor)', PatientModel.aggregate([...groupBy('doctorId'), { $sort: { count: -1, _id: 1 } }, { $limit: 10 }])],
+  ['dashboard: patients by condition', PatientModel.aggregate(groupBy('condition'))],
+  ['dashboard: patients by status', PatientModel.aggregate(groupBy('status'))],
+  ['dashboard: doctors by specialization', DoctorModel.aggregate(groupBy('specialization'))],
 ];
 
 for (const [label, query] of queries) {
   const result = (await query.explain('executionStats')) as ExplainResult;
-  const plan = result.queryPlanner.winningPlan.queryPlan ?? result.queryPlanner.winningPlan;
-  const stats = result.executionStats;
-  const scan = describePlan(plan).includes('COLLSCAN') ? '⚠ COLLSCAN' : '✓ index';
+  const planner = result.queryPlanner ?? result.stages?.[0]?.$cursor?.queryPlanner;
+  const stats = result.executionStats ?? result.stages?.[0]?.$cursor?.executionStats;
+  if (!planner || !stats) {
+    console.log(`\n?  ${label}: unexpected explain format`);
+    continue;
+  }
 
-  const rejected = result.queryPlanner.rejectedPlans.map((p) => describePlan(p.queryPlan ?? p));
+  const plan = planner.winningPlan.queryPlan ?? planner.winningPlan;
+  const scan = describePlan(plan).includes('COLLSCAN') ? '⚠ COLLSCAN' : '✓ index';
+  const rejected = planner.rejectedPlans.map((p) => describePlan(p.queryPlan ?? p));
 
   console.log(`\n${scan}  ${label}`);
   console.log(`   plan: ${describePlan(plan)}`);
