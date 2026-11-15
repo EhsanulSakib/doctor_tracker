@@ -15,7 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { isApiError } from "@/lib/api/errors";
 import { CONDITIONS, GENDER_LABELS, GENDERS, PATIENT_STATUS_LABELS, PATIENT_STATUSES, PHONE_PLACEHOLDER } from "@/lib/constants";
 import { todayIso } from "@/lib/utils";
-import { createDoctorPatient, updatePatient } from "../client";
+import { DoctorSelect } from "@/features/doctors/components/doctor-select";
+import { createDoctorPatient, createPatient, updatePatient } from "../client";
 import { patientFormDefaults, patientFormSchema, type PatientFormValues, type PatientPayload } from "../schema";
 import type { Patient } from "../types";
 
@@ -23,18 +24,23 @@ const GENDER_OPTIONS = GENDERS.map((value) => ({ value, label: GENDER_LABELS[val
 const CONDITION_OPTIONS = CONDITIONS.map((value) => ({ value, label: value }));
 const STATUS_OPTIONS = PATIENT_STATUSES.map((value) => ({ value, label: PATIENT_STATUS_LABELS[value] }));
 const FIELDS = new Set<string>(["name", "age", "gender", "phone", "email", "condition", "status", "admissionDate", "notes"]);
+/** API field name → form field name. */
+const fieldOf = (apiField: string) => (apiField === "doctorId" ? "doctor" : apiField);
 
 type PatientFormDialogProps = {
   open: boolean;
   onClose: () => void;
   /** Edit this patient; null = add a new one. */
   patient: Patient | null;
-  /** The doctor a new patient is added to (the doctor profile page). */
-  doctor: { id: string; name: string };
+  /**
+   * Doctor profile: every patient here belongs to this doctor (no picker). Without it (patients page)
+   * the form has a doctor picker, which also moves an existing patient to another doctor.
+   */
+  fixedDoctor?: { id: string; name: string };
 };
 
-/** Add / edit a patient of one doctor. Shared with the patients page (module 4.2), which adds a doctor picker. */
-export function PatientFormDialog({ open, onClose, patient, doctor }: PatientFormDialogProps) {
+/** Add / edit a patient: from a doctor's profile (doctor fixed) or the patients page (doctor picker). */
+export function PatientFormDialog({ open, onClose, patient, fixedDoctor }: PatientFormDialogProps) {
   const [saving, setSaving] = useState(false);
   const formId = useId();
 
@@ -43,7 +49,7 @@ export function PatientFormDialog({ open, onClose, patient, doctor }: PatientFor
       open={open}
       onClose={onClose}
       title={patient ? "Edit patient" : "New patient"}
-      description={`Doctor: ${doctor.name}`}
+      description={fixedDoctor ? `Doctor: ${fixedDoctor.name}` : undefined}
       size="lg"
       dismissible={!saving}
       footer={
@@ -57,7 +63,7 @@ export function PatientFormDialog({ open, onClose, patient, doctor }: PatientFor
         </>
       }
     >
-      <PatientForm key={patient?.id ?? "new"} id={formId} patient={patient} doctorId={doctor.id} onSavingChange={setSaving} onSaved={onClose} />
+      <PatientForm key={patient?.id ?? "new"} id={formId} patient={patient} fixedDoctor={fixedDoctor} onSavingChange={setSaving} onSaved={onClose} />
     </Dialog>
   );
 }
@@ -65,13 +71,13 @@ export function PatientFormDialog({ open, onClose, patient, doctor }: PatientFor
 function PatientForm({
   id,
   patient,
-  doctorId,
+  fixedDoctor,
   onSavingChange,
   onSaved,
 }: {
   id: string;
   patient: Patient | null;
-  doctorId: string;
+  fixedDoctor?: { id: string; name: string };
   onSavingChange: (saving: boolean) => void;
   onSaved: () => void;
 }) {
@@ -87,7 +93,7 @@ function PatientForm({
   } = useForm<PatientFormValues, unknown, PatientPayload>({
     // The inputs allow "" for a not-yet-chosen select; the schema turns valid values into the payload type.
     resolver: zodResolver(patientFormSchema) as unknown as Resolver<PatientFormValues, unknown, PatientPayload>,
-    defaultValues: patientFormDefaults(patient),
+    defaultValues: patientFormDefaults(patient, fixedDoctor),
     mode: "onSubmit",
     reValidateMode: "onChange",
   });
@@ -96,14 +102,24 @@ function PatientForm({
     setFormError(null);
     onSavingChange(true);
     try {
-      const saved = patient ? await updatePatient(patient.id, values) : await createDoctorPatient(doctorId, values);
-      toast.success(patient ? "Changes saved" : "Patient added", saved.name);
+      const { doctor, ...fields } = values;
+      const moved = !!patient && doctor.id !== patient.doctorId;
+      const saved = patient
+        ? await updatePatient(patient.id, moved ? { ...fields, doctorId: doctor.id } : fields)
+        : fixedDoctor
+          ? await createDoctorPatient(fixedDoctor.id, fields)
+          : await createPatient({ ...fields, doctorId: doctor.id });
+      if (moved) toast.success("Patient moved", `${saved.name} is now with ${doctor.name}`);
+      else toast.success(patient ? "Changes saved" : "Patient added", saved.name);
       refreshNotifications();
       router.refresh();
       onSaved();
     } catch (error) {
       if (!isApiError(error)) throw error;
-      const fieldErrors = Object.entries(error.fieldErrors).filter(([field]) => FIELDS.has(field));
+      // With a fixed doctor there is no doctor field to show the error on: it becomes a form error.
+      const fieldErrors = Object.entries(error.fieldErrors)
+        .map(([field, message]) => [fieldOf(field), message] as const)
+        .filter(([field]) => FIELDS.has(field) || (field === "doctor" && !fixedDoctor));
       for (const [field, message] of fieldErrors) setError(field as keyof PatientFormValues, { message }, { shouldFocus: true });
       if (fieldErrors.length === 0) setFormError(error.code === "NOT_FOUND" || error.code === "DOCTOR_NOT_FOUND" ? "This doctor no longer exists." : error.message);
     } finally {
@@ -118,6 +134,17 @@ function PatientForm({
       <Field label="Full name" required error={errors.name?.message} className="sm:col-span-2">
         {(p) => <Input {...p} {...register("name")} autoComplete="off" placeholder="Rahima Begum" />}
       </Field>
+      {!fixedDoctor && (
+        <Field label="Doctor" required error={errors.doctor?.message} className="sm:col-span-2">
+          {(p, { labelId }) => (
+            <Controller
+              control={control}
+              name="doctor"
+              render={({ field }) => <DoctorSelect {...p} labelId={labelId} value={field.value} onChange={field.onChange} onBlur={field.onBlur} />}
+            />
+          )}
+        </Field>
+      )}
       <Field label="Age" required error={errors.age?.message}>
         {(p) => <Input {...p} {...register("age", { valueAsNumber: true })} type="number" inputMode="numeric" min={0} max={120} step={1} />}
       </Field>

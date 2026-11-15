@@ -177,6 +177,20 @@ features/patients/
 lib/list-params.ts                  readString / readEnum / readInt / readDate / readPaging / orderedRange
 components/layout/breadcrumb-tail.tsx   detail pages add their name to the top bar breadcrumb
 ```
+### Patients (built in 4.2)
+```
+app/(app)/patients/page.tsx         server: parsePatientParams → getPatients + getDoctorOption(doctorId) → <PatientsView>
+app/(app)/patients/loading.tsx      <PatientsListSkeleton>
+features/patients/
+  server.ts                         getPatients · getDoctorOption (null when gone → filter dropped by redirect)
+  components/patients-view.tsx      toolbar · FilterTokens · DataTable (PATIENTS_COLUMNS) · Pagination · dialogs
+  components/patient-filters-dialog.tsx   status · condition · gender · DoctorSelect · admission range · sort
+  components/patient-form-dialog.tsx      fixedDoctor (profile) or DoctorSelect (patients page; edit = reassign)
+features/doctors/components/doctor-select.tsx   async doctor combobox (/api/doctors/options)
+components/ui/filter-tokens.tsx     FilterTokens + FiltersButton (both lists)
+hooks/use-navigate-transition.ts    [isPending, navigate(href)]
+```
+- **`DoctorSelect`**: `value: DoctorOption | null`, `onChange`, `clearable`, `placeholder`, plus the Field props (`id`, `labelId`, `aria-*`, `onBlur`). Works inside dialogs (focus stays in the input; Escape closes only its list).
 - **List page recipe:** parse params on the server → fetch in parallel → client view gets data + params → `navigate(patch)` = `router.replace(href(params, patch), { scroll: false })` in `startTransition`; dim the table with `isPending`; redirect a page past the end to the last page.
 - **Never key a search box by its own text** (it remounts and loses focus as results land); key it by a counter bumped by outside "clear" actions.
 - **Screen-fitting tables:** the page root is `flex flex-col lg:min-h-0 lg:flex-1`, the table wrapper `flex min-h-0 flex-col`, and `<DataTable fill>`.

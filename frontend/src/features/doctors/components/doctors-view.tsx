@@ -1,19 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { formatRange } from "@/components/ui/date-range-field";
 import { EmptyState } from "@/components/ui/empty-state";
 import { IconButton } from "@/components/ui/icon-button";
-import { FilterIcon, PencilIcon, PlusIcon, StethoscopeIcon, TrashIcon, XIcon } from "@/components/ui/icons";
+import { FilterTokens, FiltersButton, type FilterToken } from "@/components/ui/filter-tokens";
+import { FilterIcon, PencilIcon, PlusIcon, StethoscopeIcon, TrashIcon } from "@/components/ui/icons";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useNavigateTransition } from "@/hooks/use-navigate-transition";
 import type { PageMeta } from "@/lib/api/types";
 import { DOCTOR_STATUS_LABELS, DOCTOR_STATUS_TONES, DOCTOR_STATUSES, SPECIALIZATIONS } from "@/lib/constants";
 import { cn, formatDate, formatNumber } from "@/lib/utils";
@@ -136,8 +137,7 @@ type DoctorsViewProps = { doctors: Doctor[]; meta: PageMeta; params: DoctorListP
  * transition, so the current rows stay on screen, dimmed, until the server sends the new page.
  */
 export function DoctorsView({ doctors, meta, params, hospitals }: DoctorsViewProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, go] = useNavigateTransition();
   const [dialog, setDialog] = useState<DialogKind | null>(null);
   // Kept after closing, so the dialog doesn't go blank during its exit animation.
   const [target, setTarget] = useState<Doctor | null>(null);
@@ -145,7 +145,7 @@ export function DoctorsView({ doctors, meta, params, hospitals }: DoctorsViewPro
   // the search text itself would remount it (and drop focus) every time a typed search lands in the URL.
   const [searchKey, setSearchKey] = useState(0);
 
-  const navigate = (patch: Partial<DoctorListParams>) => startTransition(() => router.replace(doctorsHref(params, patch), { scroll: false }));
+  const navigate = (patch: Partial<DoctorListParams>) => go(doctorsHref(params, patch));
   const open = (kind: DialogKind, doctor: Doctor | null = null) => {
     setTarget(doctor);
     setDialog(kind);
@@ -153,7 +153,7 @@ export function DoctorsView({ doctors, meta, params, hospitals }: DoctorsViewPro
   const close = () => setDialog(null);
 
   const filterCount = activeFilterCount(params);
-  const tokens = filterTokens(params);
+  const tokens = filterTokens(params, navigate);
   const hasQuery = filterCount > 0 || !!params.search;
 
   return (
@@ -184,45 +184,13 @@ export function DoctorsView({ doctors, meta, params, hospitals }: DoctorsViewPro
           emptyOption="All statuses"
           className="hidden w-40 xl:flex"
         />
-        <Button variant="secondary" icon={<FilterIcon />} onClick={() => open("filters")} aria-label={filterCount ? `Filters, ${filterCount} active` : "Filters"} className="max-sm:w-11 max-sm:px-0">
-          <span className="max-sm:sr-only">Filters</span>
-          {filterCount > 0 && (
-            <span aria-hidden className="flex size-5 items-center justify-center rounded-full bg-accent text-[11px] font-semibold text-accent-ink tabular-nums max-sm:hidden">
-              {filterCount}
-            </span>
-          )}
-        </Button>
+        <FiltersButton count={filterCount} onClick={() => open("filters")} />
         <Button icon={<PlusIcon />} onClick={() => open("create")} className="ml-auto max-sm:w-11 max-sm:px-0">
           <span className="max-sm:sr-only">New doctor</span>
         </Button>
       </div>
 
-      {tokens.length > 0 && (
-        <ul className="flex flex-wrap items-center gap-1.5" aria-label="Active filters">
-          {tokens.map((token) => (
-            <li key={token.key} className="inline-flex h-7 items-center gap-0.5 rounded-control border border-line bg-surface pr-0.5 pl-2 text-[13px] text-ink">
-              {token.label}
-              <button
-                type="button"
-                onClick={() => navigate(token.clear)}
-                aria-label={`Remove filter: ${token.label}`}
-                className="flex size-6 items-center justify-center rounded-[6px] text-ink-muted transition-colors hover:bg-paper-2 hover:text-ink focus-ring"
-              >
-                <XIcon size={14} />
-              </button>
-            </li>
-          ))}
-          <li>
-            <button
-              type="button"
-              onClick={() => navigate(CLEARED_FILTERS)}
-              className="h-7 rounded-control px-2 text-[13px] font-medium text-accent-fg transition-colors hover:bg-paper-2 focus-ring"
-            >
-              Clear all
-            </button>
-          </li>
-        </ul>
-      )}
+      <FilterTokens tokens={tokens} onClearAll={() => navigate(CLEARED_FILTERS)} />
 
       <div aria-busy={isPending} className={cn("flex min-h-0 flex-col transition-opacity duration-200", isPending && "opacity-60")}>
         <DataTable
@@ -302,18 +270,19 @@ const CLEARED_FILTERS: Partial<DoctorListParams> = {
 };
 
 /** One removable token per active filter (search has its own box, so it isn't repeated here). */
-function filterTokens(params: DoctorListParams): { key: string; label: string; clear: Partial<DoctorListParams> }[] {
-  const tokens: { key: string; label: string; clear: Partial<DoctorListParams> }[] = [];
-  if (params.specialization) tokens.push({ key: "specialization", label: params.specialization, clear: { specialization: undefined } });
-  if (params.status) tokens.push({ key: "status", label: DOCTOR_STATUS_LABELS[params.status], clear: { status: undefined } });
-  if (params.hospital) tokens.push({ key: "hospital", label: params.hospital, clear: { hospital: undefined } });
+function filterTokens(params: DoctorListParams, navigate: (patch: Partial<DoctorListParams>) => void): FilterToken[] {
+  const tokens: FilterToken[] = [];
+  const add = (key: string, label: string, clear: Partial<DoctorListParams>) => tokens.push({ key, label, onRemove: () => navigate(clear) });
+  if (params.specialization) add("specialization", params.specialization, { specialization: undefined });
+  if (params.status) add("status", DOCTOR_STATUS_LABELS[params.status], { status: undefined });
+  if (params.hospital) add("hospital", params.hospital, { hospital: undefined });
   const joined = formatRange({ from: params.joinedFrom, to: params.joinedTo });
-  if (joined) tokens.push({ key: "joined", label: `Joined ${joined}`, clear: { joinedFrom: undefined, joinedTo: undefined } });
+  if (joined) add("joined", `Joined ${joined}`, { joinedFrom: undefined, joinedTo: undefined });
   const { expMin, expMax } = params;
   if (expMin !== undefined || expMax !== undefined) {
     const label =
       expMin !== undefined && expMax !== undefined ? `${expMin}–${years(expMax)}` : expMin !== undefined ? `${years(expMin)} or more` : `Up to ${years(expMax!)}`;
-    tokens.push({ key: "experience", label: `Experience ${label}`, clear: { expMin: undefined, expMax: undefined } });
+    add("experience", `Experience ${label}`, { expMin: undefined, expMax: undefined });
   }
   return tokens;
 }

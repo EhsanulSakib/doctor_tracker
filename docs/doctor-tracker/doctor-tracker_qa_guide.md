@@ -258,6 +258,26 @@ Start the API and the frontend (see 3.2), sign in, open **Doctors**. `npm run se
 
 **Result 2026-11-15 (headless Chrome, production build):** 32/32 automated (scenarios 1–4, 6–16, 18–20, plus focus staying in the search box, `aria-sort`, sticky header, layout at 1366×768 and skeleton geometry: header 45px / row 61px / same position as the real table). Regressions: layout 20/20, UI 26/26, top bar 20/20. #5 and #17 checked separately (bad URL handled as described; deleting from the profile returns to /doctors with the doctor gone).
 
+### 4.2 Patients UI
+Open **Patients**. `npm run seed` afterwards restores the demo data.
+
+| # | Scenario | Steps | Expected |
+|---|---|---|---|
+| 1 | List | open /patients | "Showing 1–10 of 200", newest admission first; each row: name, age · gender · phone, condition, status, doctor (link) + specialization, admitted (wide screens), edit / delete |
+| 2 | Search | type "khatun" | only matching patients; the cursor stays in the box; Escape clears |
+| 3 | Quick filters | (wide screen) status Recovered, condition Asthma | both apply; two tokens; "Clear all" |
+| 4 | Doctor filter | Filters → Doctor: type "tap", pick Dr. Tapas Ghosh (Enter or click) → Show results | only that doctor's patients; token "Dr. Tapas Ghosh"; × removes only that filter |
+| 5 | Stale doctor | open `/patients?doctorId=000000000000000000000000&status=active` | the doctor filter is dropped (URL becomes `?status=active`), no error |
+| 6 | Sort / paging | click the Patient header; next page | A to Z; "Showing 11–20 of 200" |
+| 7 | Create | New patient → Add patient empty | 7 fields flagged (doctor included); fill in and pick a doctor → toast, patient on top, total 201, that doctor's patient count +1 |
+| 8 | Picker keys | in the form's doctor field: ↓, ↑, Enter, Escape | moves / picks; Escape closes only the list (the dialog stays) |
+| 9 | Move | edit the patient → pick another doctor → Save changes | toast "Patient moved"; row shows the new doctor; old doctor −1, new doctor +1 (Doctors page); bell +1 |
+| 10 | Delete | trash → Delete patient | toast, gone, total back to 200 |
+| 11 | Doctor profile form | on a doctor's profile → Add patient | no doctor picker (that doctor is fixed); works as in 4.1 |
+| 12 | Phone | ~390px | cards with every field, no sideways scroll; filters from the bottom |
+
+**Result 2026-11-15 (headless Chrome, production build):** 17/17 automated (scenarios 1–10 and 12, plus skeleton geometry: header 44px / row 61px / same position, and layout at 1366×768). #11 covered by the doctors run (32/32). Regressions: layout 20/20, UI 26/26, top bar 20/20.
+
 ## Edge-case checklist (global)
 - [x] Every protected endpoint returns 401 without a cookie (`/api/auth/me`, `/api/doctors/*`, `/api/patients/*`, `/api/dashboard/*`)
 - [x] Every protected page redirects to `/login?next=` without a session (proxy); `?next=` can't point off-site

@@ -1,5 +1,5 @@
 import { CONDITIONS, GENDERS, PATIENT_STATUSES, type Condition, type Gender, type PatientStatus } from "@/lib/constants";
-import { DEFAULT_PAGE_SIZE, orderedRange, readDate, readEnum, readPaging, readString, type RawSearchParams } from "@/lib/list-params";
+import { DEFAULT_PAGE_SIZE, orderedRange, readDate, readEnum, readObjectId, readPaging, readString, type RawSearchParams } from "@/lib/list-params";
 import { toQueryString, type QueryParams } from "@/lib/utils";
 import { DEFAULT_PATIENT_SORT, PATIENT_SORTS, type PatientSort } from "./types";
 
@@ -11,6 +11,8 @@ export type PatientListParams = {
   condition?: Condition;
   status?: PatientStatus;
   gender?: Gender;
+  /** /patients only (the doctor profile takes the doctor from its path). */
+  doctorId?: string;
   admittedFrom?: string;
   admittedTo?: string;
   sort: PatientSort;
@@ -24,6 +26,7 @@ export function parsePatientParams(raw: RawSearchParams): PatientListParams {
     condition: readEnum(raw, "condition", CONDITIONS),
     status: readEnum(raw, "status", PATIENT_STATUSES),
     gender: readEnum(raw, "gender", GENDERS),
+    doctorId: readObjectId(raw, "doctorId"),
     admittedFrom,
     admittedTo,
     sort: readEnum(raw, "sort", PATIENT_SORTS) ?? DEFAULT_PATIENT_SORT,

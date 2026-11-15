@@ -28,6 +28,12 @@ export function readInt(raw: RawSearchParams, key: string, min: number, max: num
   return n >= min && n <= max ? n : undefined;
 }
 
+/** A MongoDB id (24 hex characters). */
+export function readObjectId(raw: RawSearchParams, key: string): string | undefined {
+  const value = readString(raw, key, 24);
+  return value && /^[a-f\d]{24}$/i.test(value) ? value : undefined;
+}
+
 /** A real calendar date as `YYYY-MM-DD` (rejects `2026-02-31`). */
 export function readDate(raw: RawSearchParams, key: string): string | undefined {
   const value = readString(raw, key, 10);

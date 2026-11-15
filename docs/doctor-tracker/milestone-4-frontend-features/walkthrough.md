@@ -9,3 +9,8 @@ The first feature module, and the pattern the other two reuse:
 - Skeletons are the real table in loading mode.
 
 Details: [module-1-doctors-ui/walkthrough.md](module-1-doctors-ui/walkthrough.md).
+
+## 4.2 Patients UI (done 2026-11-15)
+The same pattern again, with the shared parts pulled out (`useNavigateTransition`, `FilterTokens`, `FiltersButton`), plus `DoctorSelect`: an async combobox for the doctor filter and for assigning or moving patients.
+
+Details: [module-2-patients-ui/walkthrough.md](module-2-patients-ui/walkthrough.md).

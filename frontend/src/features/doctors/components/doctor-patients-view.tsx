@@ -1,7 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/ui/data-table";
@@ -16,6 +15,7 @@ import { DeletePatientDialog } from "@/features/patients/components/delete-patie
 import { PatientFormDialog } from "@/features/patients/components/patient-form-dialog";
 import { patientsHref, type PatientListParams } from "@/features/patients/params";
 import type { Patient } from "@/features/patients/types";
+import { useNavigateTransition } from "@/hooks/use-navigate-transition";
 import type { PageMeta } from "@/lib/api/types";
 import { CONDITIONS, GENDER_LABELS, PATIENT_STATUS_LABELS, PATIENT_STATUS_TONES, PATIENT_STATUSES } from "@/lib/constants";
 import { cn, formatDate } from "@/lib/utils";
@@ -73,15 +73,14 @@ type DoctorPatientsViewProps = {
 
 /** The doctor's patients: search, status / condition filters, sortable columns, pages, add / edit / delete. */
 export function DoctorPatientsView({ doctor, patients, meta, params }: DoctorPatientsViewProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, go] = useNavigateTransition();
   const [dialog, setDialog] = useState<"create" | "edit" | "delete" | null>(null);
   const [target, setTarget] = useState<Patient | null>(null);
   // Resets the search box only when it is cleared from outside (see DoctorsView).
   const [searchKey, setSearchKey] = useState(0);
   const basePath = `/doctors/${doctor.id}`;
 
-  const navigate = (patch: Partial<PatientListParams>) => startTransition(() => router.replace(patientsHref(basePath, params, patch), { scroll: false }));
+  const navigate = (patch: Partial<PatientListParams>) => go(patientsHref(basePath, params, patch));
   const open = (kind: "create" | "edit" | "delete", patient: Patient | null = null) => {
     setTarget(patient);
     setDialog(kind);
@@ -186,7 +185,7 @@ export function DoctorPatientsView({ doctor, patients, meta, params }: DoctorPat
         </div>
       )}
 
-      <PatientFormDialog open={dialog === "create" || dialog === "edit"} onClose={() => setDialog(null)} patient={dialog === "create" ? null : target} doctor={doctor} />
+      <PatientFormDialog open={dialog === "create" || dialog === "edit"} onClose={() => setDialog(null)} patient={dialog === "create" ? null : target} fixedDoctor={doctor} />
       <DeletePatientDialog open={dialog === "delete"} onClose={() => setDialog(null)} patient={target} />
     </section>
   );
