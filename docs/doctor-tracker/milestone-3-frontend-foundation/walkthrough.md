@@ -1,22 +1,27 @@
 # Milestone 3 — Frontend Foundation: Walkthrough
 
 > Index of every file produced in this milestone. Each module's `walkthrough.md` explains its files in detail.
+> **Status: complete (2026-11-15).**
 
 | Module | Status | Detailed walkthrough |
 |---|---|---|
 | 3.1 Scaffold + design system | done | [module-1-scaffold-and-design-system/walkthrough.md](module-1-scaffold-and-design-system/walkthrough.md) |
-| 3.2 Auth + app shell | not started | — |
+| 3.2 Auth + app shell | done | [module-2-auth-and-app-shell/walkthrough.md](module-2-auth-and-app-shell/walkthrough.md) |
 
-## Files added so far
+## Files added
 ```
 frontend/
-├── next.config.ts · package.json · tsconfig.json · eslint.config.mjs · .env.example · README.md   3.1
+├── next.config.ts · package.json · tsconfig.json · eslint.config.mjs · .env.example · README.md   3.1 (+ / redirect 3.2)
 └── src/
-    ├── app/{layout,providers,page}.tsx · globals.css                                           3.1
-    ├── components/ui/   17 primitives + icons + portal                                           3.1
+    ├── proxy.ts                                                                                   3.2
+    ├── app/{layout,providers}.tsx · globals.css                                                  3.1 (+ preferences script 3.2)
+    ├── app/{error,not-found,loading}.tsx · (auth)/login · (app)/{layout,loading,error,pages}     3.2
+    ├── components/ui/   17 primitives + icons + portal (3.1) · drawer + modal (3.2)
+    ├── components/layout/  sidebar · topbar · mobile-nav · user-menu · theme-toggle · page-header · brand   3.2
+    ├── features/auth/   login-form · current-user · current-user-menu · auth-hydrator · logout    3.2
     ├── hooks/           use-debounce · use-anchored-position · use-dismiss · use-toast           3.1
-    ├── lib/             api/{server-fetch,client-fetch,errors,types} · constants · motion · utils 3.1
-    └── store/           store · provider · hooks · slices/{ui,toast}                             3.1
+    ├── lib/             api/* · constants · motion · utils (3.1) · auth/session · preferences (3.2)
+    └── store/           store · provider · hooks · slices/{ui,toast} (3.1) · slices/auth (3.2)
 ```
 
 ## File index
@@ -41,3 +46,12 @@ frontend/
 | `src/lib/motion.ts` · `motion-features.ts` | 3.1 | shared motion variants; lazily loaded animation features |
 | `src/lib/utils.ts` | 3.1 | `cn()`, Bangladesh date/number formatting, query strings |
 | `src/store/*` | 3.1 | Redux store factory, provider, typed hooks, `ui` + `toast` slices |
+| `src/proxy.ts` | 3.2 | guard + silent refresh before every page render; prefetches and /api excluded |
+| `src/app/(auth)/login/page.tsx` · `features/auth/login-form.tsx` | 3.2 | sign-in page and form (RHF + Zod, error mapping, safe `next` redirect) |
+| `src/app/(app)/layout.tsx` | 3.2 | static shell + streamed account menu |
+| `src/app/(app)/{loading,error}.tsx` · `app/{error,not-found,loading}.tsx` | 3.2 | skeleton, error with retry, 404, spinner |
+| `src/components/layout/*` | 3.2 | sidebar (collapsible, rail on tablets), top bar, phone drawer, account menu, theme toggle, page header, brand |
+| `src/components/ui/drawer.tsx` · `modal.ts` | 3.2 | slide-in modal; shared app lock + focus trap |
+| `src/features/auth/current-user*.ts(x)` · `auth-hydrator.tsx` · `logout.ts` | 3.2 | server user lookup (cached), streamed menu with outage fallback, Redux hydration, sign out |
+| `src/lib/auth/session.ts` · `lib/preferences.ts` | 3.2 | cookie names, `safeNextPath`; theme / sidebar storage + pre-paint script |
+| `src/store/slices/auth.ts` | 3.2 | signed-in user |

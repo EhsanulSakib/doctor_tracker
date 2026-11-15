@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { preferencesScript } from "@/lib/preferences";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -34,9 +35,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    // en-BD: English as used in Bangladesh. suppressHydrationWarning: the theme script (3.2) sets
-    // data-theme on <html> before React hydrates.
+    // en-BD: English as used in Bangladesh. suppressHydrationWarning: the preferences script sets
+    // data-theme / data-sidebar on <html> before React hydrates.
     <html lang="en-BD" className={`${plexSans.variable} ${plexMono.variable}`} suppressHydrationWarning>
+      <head>
+        {/* Applies the saved theme and sidebar state before the first paint (no flash). */}
+        <script dangerouslySetInnerHTML={{ __html: preferencesScript }} />
+      </head>
       <body>
         <Providers>{children}</Providers>
       </body>

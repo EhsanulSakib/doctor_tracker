@@ -171,8 +171,34 @@ Primitives were checked visually on a temporary `/kit` page (deleted at the end 
 
 **Result 2026-11-15:** all passed.
 
+### 3.2 Auth + app shell
+Start the API (`cd backend && npm run dev`) and the frontend (`cd frontend && npm run build && npm start`, or `npm run dev`). Sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `backend/.env`.
+
+| # | Scenario | Steps | Expected |
+|---|---|---|---|
+| 1 | Protected page signed out | open http://localhost:3000/doctors?page=2 in a private window | lands on `/login?next=%2Fdoctors%3Fpage%3D2` |
+| 2 | Empty submit | click "Sign in" with empty fields | "Enter your email address" / "Enter your password" under the fields |
+| 3 | Wrong password | real email + wrong password | red alert "Email or password is incorrect.", password field selected |
+| 4 | Too many attempts | 11 wrong passwords | "Too many sign-in attempts. Please wait 15 minutes…" |
+| 5 | Sign in | correct password | back on `/doctors?page=2`; account menu shows your name |
+| 6 | Open redirect | signed in, open `/login?next=https://evil.example` | stays on the site (`/dashboard`) |
+| 7 | Silent refresh | start the API with `ACCESS_TOKEN_TTL_SECONDS=40`, sign in, wait 15 s, click another page | page loads normally; devtools → Network shows new `dt_access` / `dt_refresh` Set-Cookie on that document request |
+| 8 | Access cookie gone | devtools → Application → Cookies → delete `dt_access`, reload | page loads (refreshed), `dt_access` is back |
+| 9 | Sign out | account menu → Sign out | on `/login`; back button / any protected URL → `/login` |
+| 10 | Theme | toggle the moon/sun, reload | choice kept, no flash of the other theme on reload |
+| 11 | Sidebar | "Collapse sidebar", reload | stays collapsed (64px rail) with no jump |
+| 12 | Responsive | resize to ~900px, then ~390px | tablet: icon rail; phone: top bar + menu button → drawer (Escape / backdrop / link closes it) |
+| 13 | Keyboard | Tab from the top of a page | first stop "Skip to main content"; visible focus ring everywhere; drawer and account menu trap / return focus |
+| 14 | API outage | stop the API while signed in, reload | page and shell still render; account icon shows a warning with "Sign out"; you are not signed out |
+| 15 | 404 | open `/nope` | styled "Page not found" with a link to the dashboard |
+
+Automated equivalents ran on 2026-11-15: an end-to-end script against the production build + API (22 checks: redirects, `next`, open-redirect guard, refresh with fresh / missing / expiring tokens, prefetch without refresh, logout, revoked / garbage tokens) and a headless-Chrome run of the UI (26 checks: scenarios 1–3, 5, 9–13 and the drawer). Prefetch requests skip the proxy: compare a link hover (prefetch, no Set-Cookie) with a click (navigation, refresh if needed).
+
+**Result 2026-11-15:** 22/22 + 26/26; the API outage behaved as in #14.
+
 ## Edge-case checklist (global)
 - [x] Every protected endpoint returns 401 without a cookie (`/api/auth/me`, `/api/doctors/*`, `/api/patients/*`, `/api/dashboard/*`)
+- [x] Every protected page redirects to `/login?next=` without a session (proxy); `?next=` can't point off-site
 - [x] Invalid ObjectId in a path → 400, not 500
 - [x] Unknown route → 404 with error shape
 - [x] Malformed JSON body → 400 with error shape

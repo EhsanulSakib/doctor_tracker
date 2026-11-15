@@ -6,28 +6,8 @@ import { fade, popIn } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { IconButton } from "./icon-button";
 import { XIcon } from "./icons";
+import { lockApp, trapTab, unlockApp } from "./modal";
 import { getFocusable, Portal } from "./portal";
-
-// ─── App lock (shared by every open modal) ───────────────────────────────────────────────────
-// While a modal is open, #app-root is `inert` (no focus, no clicks, hidden from screen readers) and the
-// page doesn't scroll. `scrollbar-gutter: stable` (globals.css) keeps the layout from shifting.
-let openModals = 0;
-
-function lockApp() {
-  openModals += 1;
-  if (openModals > 1) return;
-  document.documentElement.style.overflow = "hidden";
-  document.getElementById("app-root")?.setAttribute("inert", "");
-}
-
-function unlockApp() {
-  openModals = Math.max(0, openModals - 1);
-  if (openModals > 0) return;
-  document.documentElement.style.overflow = "";
-  document.getElementById("app-root")?.removeAttribute("inert");
-}
-
-// ─── Dialog ──────────────────────────────────────────────────────────────────────────────────
 
 export type DialogProps = {
   open: boolean;
@@ -87,24 +67,7 @@ function DialogContent({ onClose, title, description, children, footer, size = "
       if (dismissible) onClose();
       return;
     }
-    if (event.key !== "Tab") return;
-
-    // Focus trap: Tab past the last control wraps to the first, Shift+Tab before the first wraps to the last.
-    const focusable = getFocusable(panelRef.current);
-    const first = focusable[0];
-    const last = focusable.at(-1);
-    if (!first || !last) {
-      event.preventDefault();
-      return;
-    }
-    const active = document.activeElement;
-    if (event.shiftKey && (active === first || active === panelRef.current)) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && active === last) {
-      event.preventDefault();
-      first.focus();
-    }
+    if (event.key === "Tab") trapTab(event, panelRef.current);
   };
 
   return (

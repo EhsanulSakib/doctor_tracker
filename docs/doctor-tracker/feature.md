@@ -1,6 +1,6 @@
 # Doctor Tracker — Feature Spec (living document)
 
-> Updated **only** when a module passes verification. Last updated: 2026-11-15 (module 3.1 verified; Bangladesh data + Asia/Dhaka timezone applied).
+> Updated **only** when a module passes verification. Last updated: 2026-11-15 (module 3.2 verified; milestone 3 complete).
 
 ## Overview
 Doctor Tracker is a secure admin portal for managing doctors and the patients assigned to them, with an analytics dashboard.
@@ -47,6 +47,7 @@ Doctor Tracker is a secure admin portal for managing doctors and the patients as
 | 2.3 Dashboard API + seed | 2026-11-15 | `GET /api/dashboard/stats?range=30d\|90d\|12m`: KPIs with delta vs previous period, zero-filled time series (bucket-aligned windows, sum = KPI), top-10 doctors, condition / status / specialization breakdowns; 10 parallel index-only queries (0 documents read); 60 s promise cache cleared on writes. Repeatable faker seed (15 doctors, 200 patients). Local MongoDB as the working DB + `npm run db:sync` to Atlas. 8 automated tests (78 total), verified on local and Atlas |
 | 2.x Bangladesh update | 2026-11-15 | Seed rewritten for Bangladesh (names, 8 fictional hospitals in Dhaka / Chattogram / Sylhet / Rajshahi / Khulna, `+880 1XXX-XXXXXX`, monsoon + winter admission peaks); `APP_TIMEZONE` (default Asia/Dhaka) decides "today": date fields accept today's Dhaka date (before, 00:00–06:00 Dhaka rejected it as "future") and dashboard windows end with today in Dhaka; local DB re-seeded and synced to Atlas. 4 new tests (82 total) |
 | 3.1 Frontend scaffold + design system | 2026-11-15 | Next.js 16.4 app (Cache Components, React Compiler, `/api` rewrite, security headers); "Clinical ledger" tokens for light/dark (WCAG AA); 17 hand-built accessible primitives (Select, Dialog/bottom sheet, Popover, Toaster, DataTable with mobile cards, Pagination, DateRangeField…); `serverFetch` / `clientFetch` with single-flight refresh; Redux UI store; Bangladesh formatting. Typecheck/lint/build clean; visual + keyboard check on the production build |
+| 3.2 Auth + app shell | 2026-11-15 | `proxy.ts` guards every page and refreshes sessions before rendering (rotated cookies forwarded to the browser and into the current render; prefetches and `/api` excluded; API outages don't sign users out); sign-in page (brand panel, RHF + Zod, error mapping, open-redirect-safe `next`); static shell with streamed account menu (fallback if the API is down); collapsible sidebar / tablet rail / phone drawer; theme + sidebar preferences applied before paint; error / 404 / loading screens. End-to-end auth 22/22, real-browser run 26/26 |
 
 ## Current API surface
 Base URL (local): `http://localhost:8082`
@@ -87,7 +88,7 @@ Scripts (from `backend/`):
 
 The API's `APP_TIMEZONE` (default `Asia/Dhaka`) decides what "today" is for date fields and dashboard ranges.
 
-Frontend (from `frontend/`): `npm run dev` → http://localhost:3000 (start the API first; `BACKEND_URL` defaults to `http://localhost:8082`). Also `npm run typecheck`, `npm run lint`, `npm run build`. No pages beyond a placeholder yet: login and the app shell arrive in 3.2.
+Frontend (from `frontend/`): `npm run dev` → http://localhost:3000 (start the API first; `BACKEND_URL` defaults to `http://localhost:8082`). Also `npm run typecheck`, `npm run lint`, `npm run build`. Pages: `/login`, and `/dashboard`, `/doctors`, `/patients` inside the app shell (placeholder content until milestone 4). Sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `backend/.env`.
 
 ## Known issues
 - **SRV lookups fail on this office network.** Node's resolver gets a malformed answer from the router for `mongodb+srv://` addresses (`querySrv EBADRESP`). Workaround in place: `SYNC_TARGET_URI` uses Atlas's standard `mongodb://host1,host2,host3` string. On Render, the SRV string works.

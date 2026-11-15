@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type { Theme } from "@/lib/preferences";
 
-export type Theme = "light" | "dark";
+export type { Theme };
 
 /** Which feature dialog is open, e.g. `{ id: "doctor-form", entityId: "…" }` (null = none). */
 export type DialogDescriptor = { id: string; entityId?: string };

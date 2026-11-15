@@ -13,11 +13,12 @@ Next.js 16.4 App Router (Cache Components, Partial Prefetching, React Compiler) 
 - **Motion:** only `m.*` components (LazyMotion strict) with variants from `lib/motion.ts`.
 - **Bangladesh formatting:** use `formatDate` / `formatDateTime` / `formatNumber` / `todayIso` from `lib/utils.ts` (day-first dates, 12-hour time, lakh grouping, Asia/Dhaka "today"). Phone placeholder `PHONE_PLACEHOLDER` (`+880 1712-345678`).
 
-## Routes _(planned)_
+## Routes
 | Route | Type | Notes |
 |---|---|---|
-| `/login` | public | redirects to `/dashboard` if a session exists |
-| `/dashboard` | protected | `?range=30d\|90d\|12m` |
+| `/` | redirect | → `/dashboard` (next.config) _(built in 3.2)_ |
+| `/login` | public, static | proxy sends signed-in visitors to `?next=` or `/dashboard` _(built in 3.2)_ |
+| `/dashboard` | protected | `?range=30d\|90d\|12m` (placeholder until 4.3) |
 | `/doctors` | protected | `?page&limit&search&specialization&hospital&status&joinedFrom&joinedTo&expMin&expMax&sort` |
 | `/doctors/[id]` | protected | doctor profile + their patients (same query params as patients) |
 | `/patients` | protected | `?page&limit&search&condition&status&gender&doctorId&admittedFrom&admittedTo&sort` |
@@ -26,7 +27,9 @@ Next.js 16.4 App Router (Cache Components, Partial Prefetching, React Compiler) 
 - **Reads** _(fetch layer built in 3.1)_: Server Components call `serverFetch<T>(path, { searchParams })` → backend directly (`BACKEND_URL`), forwarding only the `dt_access` cookie, `cache: 'no-store'`. 401 → `redirect('/login')` (backstop). List pages read `searchParams` → fetch → render.
 - **Writes** _(built in 3.1)_: client components call `clientFetch<T>(path, { method, body })` → same-origin `/api/*` (Next rewrite → Express). On 401 → single-flight `POST /api/auth/refresh` → retry once → else full reload to `/login?next=<page>`. After success → `router.refresh()`.
 - **Errors:** both throw `ApiError { status, code, message, details }`; `error.fieldErrors` gives `{ field: message }` for VALIDATION_ERROR / CONFLICT / DOCTOR_NOT_FOUND, ready for form fields. Network failure → `code: 'NETWORK_ERROR'`.
-- **Session refresh on navigation** _(planned, 3.2)_: `src/proxy.ts` decodes the access-token `exp`; if expired (or < 30 s left) it calls the backend refresh endpoint, sets the rotated cookies on both the forwarded request and the response.
+- **Session refresh on navigation** _(built in 3.2)_: `src/proxy.ts` decodes the access-token `exp`; if missing, expired or < 30 s left it calls the backend refresh endpoint and sets the rotated cookies on both the forwarded request and the response. Refresh 401 → cookies cleared, `/login?next=`; API unreachable → request passes (no sign-out). Prefetches skip the proxy (matcher `missing`).
+- **Current user** _(built in 3.2)_: `getCurrentUser()` (server-only, React `cache`); call it inside `<Suspense>`. The shell already shows it in the account menu and puts it in the `auth` slice.
+- **Safe redirects:** use `safeNextPath()` (`lib/auth/session.ts`) for any `?next=`-style value.
 
 ## Backend auth contract (built in module 1.2)
 | Thing | Value |
@@ -84,7 +87,7 @@ Next.js 16.4 App Router (Cache Components, Partial Prefetching, React Compiler) 
 ## State (Redux Toolkit)
 - `ui` slice _(built in 3.1)_: `sidebarCollapsed`, `mobileNavOpen`, `theme`, `dialog` (`{ id, entityId? } | null`); actions `sidebarToggled`, `sidebarCollapsedSet`, `mobileNavSet`, `themeSet`, `dialogOpened`, `dialogClosed`
 - `toast` slice _(built in 3.1)_: queue (max 4); use `const toast = useToast(); toast.success(title, description?)` / `.error` / `.info`
-- `auth` slice _(planned, 3.2)_: current user (hydrated from the protected layout)
+- `auth` slice _(built in 3.2)_: `user` (`PublicUser | null`), filled by `<AuthHydrator>` from the server; `selectUser`
 - Store created per request (`StoreProvider`); typed `useAppDispatch` / `useAppSelector` from `@/store/hooks`.
 - Filter **drafts** live in local component state; **applied** filters live in the URL. Server data is never copied into Redux.
 
@@ -116,5 +119,18 @@ Next.js 16.4 App Router (Cache Components, Partial Prefetching, React Compiler) 
 | `DateRangeField` | `value: { from?, to? }` (YYYY-MM-DD, inclusive), `onChange`, `label`; presets (last 7 / 30 / 90 days, 12 months, this year, last year) counted from today in Dhaka |
 | `icons.tsx` | hand-drawn 24×24 stroke icons (`size`, decorative by default) |
 
+## App shell (built in 3.2)
+```
+app/layout.tsx            fonts, pre-paint theme/sidebar script, <Providers> (store, motion, toasts, #app-root)
+├── (auth)/login          static sign-in page
+└── (app)/layout.tsx      skip link · <Sidebar> · <Topbar userSlot={<Suspense><CurrentUserMenu/></Suspense>}> · <main> · <MobileNav>
+    ├── loading.tsx       in-shell skeleton (Suspense boundary for pages)
+    ├── error.tsx         in-shell error with retry()
+    └── dashboard · doctors · patients
+```
+- New pages go under `app/(app)/…`, start with `<PageHeader title description actions>`, and fetch data in Server Components inside the route's `loading.tsx` boundary (or their own `<Suspense>`).
+- Layout components: `components/layout/` (sidebar, topbar, mobile-nav, user-menu, theme-toggle, page-header, brand, nav-items). Nav entries live in `nav-items.ts`.
+- Preferences: `applyTheme` / `applySidebarCollapsed` (`lib/preferences.ts`) write localStorage + the `<html>` attribute; use `dark:` / `sidebar-collapsed:` variants for anything visual.
+
 ## Component tree _(planned)_
-Filled in as feature modules are completed (3.2 shell, milestone 4 pages).
+Filled in as feature modules are completed (milestone 4 pages).

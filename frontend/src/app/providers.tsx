@@ -2,6 +2,7 @@
 
 import { LazyMotion, MotionConfig } from "motion/react";
 import type { ReactNode } from "react";
+import { PreferencesSync } from "@/components/layout/preferences-sync";
 import { Toaster } from "@/components/ui/toaster";
 import { StoreProvider } from "@/store/provider";
 
@@ -20,6 +21,7 @@ export function Providers({ children }: { children: ReactNode }) {
             {children}
           </div>
           <Toaster />
+          <PreferencesSync />
         </MotionConfig>
       </LazyMotion>
     </StoreProvider>

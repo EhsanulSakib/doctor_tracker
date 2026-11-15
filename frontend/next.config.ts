@@ -29,6 +29,10 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  async redirects() {
+    // The portal has no landing page; proxy.ts then sends signed-out visitors on to /login.
+    return [{ source: "/", destination: "/dashboard", permanent: false }];
+  },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${BACKEND_URL}/api/:path*` }];
   },
