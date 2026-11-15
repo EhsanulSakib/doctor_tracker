@@ -15,7 +15,7 @@ export default function RootError({ error, retry }: { error: unknown; retry: () 
       <div className="max-w-md text-center">
         <BrandMark className="mx-auto" />
         <h1 className="mt-8 text-title font-semibold text-ink">Something went wrong</h1>
-        <p className="mt-2 text-sm text-ink-muted">An unexpected error stopped this page from loading. Please try again.</p>
+        <p className="mt-2 text-sm text-ink-muted">Please try again.</p>
         <Button className="mt-8" onClick={() => retry()}>
           Try again
         </Button>

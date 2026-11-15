@@ -21,6 +21,10 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   // Automatic memoization: components and values re-render only when their inputs change.
   reactCompiler: true,
+  images: {
+    // AVIF first (smallest), WebP fallback; Next picks per browser from the Accept header.
+    formats: ["image/avif", "image/webp"],
+  },
   turbopack: {
     rules: {
       "*.css": {

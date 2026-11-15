@@ -16,9 +16,10 @@ import { env } from '../config/env.js';
 import { RefreshTokenModel } from '../modules/auth/refresh-token.model.js';
 import { UserModel } from '../modules/auth/user.model.js';
 import { DoctorModel } from '../modules/doctors/doctor.model.js';
+import { NotificationModel } from '../modules/notifications/notification.model.js';
 import { PatientModel } from '../modules/patients/patient.model.js';
 
-const COPIED: Model<any>[] = [UserModel, DoctorModel, PatientModel];
+const COPIED: Model<any>[] = [UserModel, DoctorModel, PatientModel, NotificationModel];
 const CLEARED: Model<any>[] = [RefreshTokenModel];
 const BATCH_SIZE = 1000;
 

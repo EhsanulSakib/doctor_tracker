@@ -4,6 +4,7 @@
  */
 import { connectDb, disconnectDb } from '../config/db.js';
 import { DoctorModel } from '../modules/doctors/doctor.model.js';
+import { NotificationModel, NOTIFICATION_TTL_SECONDS } from '../modules/notifications/notification.model.js';
 import { PatientModel } from '../modules/patients/patient.model.js';
 import { searchKeyFilter } from '../lib/search-key.js';
 
@@ -31,7 +32,7 @@ function describePlan(node: PlanNode | undefined): string {
 type Explainable = { explain: (verbosity: 'executionStats') => Promise<unknown> };
 
 await connectDb();
-await Promise.all([DoctorModel.init(), PatientModel.init()]);
+await Promise.all([DoctorModel.init(), PatientModel.init(), NotificationModel.init()]);
 
 // Real values make the plans meaningful (keys examined > 0); fall back to fixed ones on an empty DB.
 const [sampleDoctor, samplePatient] = await Promise.all([
@@ -42,6 +43,7 @@ const doctorId = samplePatient?.doctorId.toString() ?? '000000000000000000000000
 const doctorTerm = sampleDoctor?.name.split(' ').at(-1)?.toLowerCase() ?? 'aisha';
 const patientTerm = samplePatient?.name.split(' ')[0]?.toLowerCase() ?? 'maya';
 const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000);
+const sampleSubjectId = (await NotificationModel.findOne().select('subject.id').lean())?.subject.id ?? '000000000000000000000000';
 const groupBy = (field: string) => [{ $sort: { [field]: 1 as const } }, { $group: { _id: `$${field}`, count: { $sum: 1 } } }];
 
 const queries: Array<[string, Explainable]> = [
@@ -74,6 +76,9 @@ const queries: Array<[string, Explainable]> = [
   ['dashboard: patients by condition', PatientModel.aggregate(groupBy('condition'))],
   ['dashboard: patients by status', PatientModel.aggregate(groupBy('status'))],
   ['dashboard: doctors by specialization', DoctorModel.aggregate(groupBy('specialization'))],
+  ['notifications: latest 20 (topbar bell)', NotificationModel.find({}).sort({ createdAt: -1, _id: -1 }).limit(20)],
+  ['notifications: unread count / mark all read', NotificationModel.aggregate([{ $match: { readAt: null } }, { $count: 'n' }])],
+  ['notifications: cleanup for a deleted subject', NotificationModel.find({ 'subject.id': sampleSubjectId })],
 ];
 
 for (const [label, query] of queries) {
@@ -96,5 +101,13 @@ for (const [label, query] of queries) {
     `   returned ${stats.nReturned} · keys examined ${stats.totalKeysExamined} · docs examined ${stats.totalDocsExamined} · ${stats.executionTimeMillis} ms`,
   );
 }
+
+// The TTL index isn't used by queries: MongoDB's TTL monitor reads it to delete old notifications.
+const ttl = (await NotificationModel.collection.indexes()).find((index) => index.expireAfterSeconds !== undefined);
+console.log(
+  ttl?.expireAfterSeconds === NOTIFICATION_TTL_SECONDS
+    ? `\n✓ TTL  notifications.${ttl.name}: removed after ${ttl.expireAfterSeconds / 86_400} days`
+    : '\n⚠ TTL  notifications: TTL index missing or out of date (run npm run seed or db:sync)',
+);
 
 await disconnectDb();

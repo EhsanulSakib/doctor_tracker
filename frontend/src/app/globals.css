@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ─── "Clinical ledger" design tokens ───────────────────────────────────────────────────────
+/* ─── Design tokens: slate neutrals + indigo / violet ───────────────────────────────────────
    Raw values live here; components only use the semantic utilities generated from @theme below
    (bg-paper, text-ink-muted, border-line, bg-accent…), so switching data-theme re-colors everything.
    Text pairs meet WCAG AA (4.5:1) in both themes. */
@@ -8,65 +8,71 @@
 :root {
   color-scheme: light;
 
-  --paper: #faf9f6; /* app background */
-  --paper-2: #f2f0eb; /* hover / subtle fill */
-  --surface: #ffffff; /* tables, cards, dialogs */
-  --ink: #1c1f23; /* primary text */
-  --ink-muted: #5d6670; /* secondary text */
-  --ink-subtle: #757d86; /* placeholders, disabled */
-  --line: #e6e3dc; /* hairline borders */
-  --line-strong: #d3cec3; /* input borders */
+  --paper: #f8fafc; /* app background (slate-50) */
+  --paper-2: #f1f5f9; /* hover / subtle fill (slate-100) */
+  --surface: #ffffff; /* sidebar, cards, tables, dialogs */
+  --ink: #0f172a; /* primary text (slate-900) */
+  --ink-muted: #64748b; /* secondary text (slate-500) */
+  --ink-subtle: #94a3b8; /* placeholders, decorative icons (slate-400) */
+  --line: #e2e8f0; /* borders (slate-200) */
+  --line-strong: #cbd5e1; /* input borders (slate-300) */
 
-  --accent: #0f6e6e;
-  --accent-hover: #0b5c5c;
-  --accent-soft: #e3f0ef;
+  --accent: #4f46e5; /* indigo-600: buttons, highlights (white text 6.3:1) */
+  --accent-hover: #4338ca;
+  --accent-soft: #eef2ff; /* selected nav item, chips */
   --accent-ink: #ffffff; /* text on accent */
+  --accent-fg: #4f46e5; /* accent used AS text or icon on light surfaces */
+  --accent-2: #7c3aed; /* violet-600: brand gradient partner */
 
-  --danger: #b4372f;
-  --danger-hover: #9b2d26;
-  --danger-soft: #fbecea;
+  --danger: #b91c1c;
+  --danger-hover: #991b1b;
+  --danger-soft: #fef2f2;
   --danger-ink: #ffffff;
-  --warning: #8f6209;
-  --warning-soft: #fbf2df;
-  --success: #2c7548;
-  --success-soft: #e5f2e9;
-  --info: #2d5e8c;
-  --info-soft: #e7eff7;
+  --warning: #b45309;
+  --warning-soft: #fffbeb;
+  --success: #047857;
+  --success-soft: #ecfdf5;
+  --info: #0369a1;
+  --info-soft: #f0f9ff;
 
-  --overlay: rgb(28 31 35 / 0.36);
-  --elevation-overlay: 0 1px 2px rgb(28 31 35 / 0.06), 0 12px 32px -8px rgb(28 31 35 / 0.2);
+  --overlay: rgb(15 23 42 / 0.45);
+  --elevation-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
+  --elevation-overlay: 0 4px 12px -4px rgb(15 23 42 / 0.08), 0 16px 40px -8px rgb(15 23 42 / 0.18);
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --paper: #121417;
-  --paper-2: #1c1f24;
-  --surface: #181b1f;
-  --ink: #e8e6e1;
-  --ink-muted: #9aa2ab;
-  --ink-subtle: #79818b;
-  --line: #2a2f35;
-  --line-strong: #3b4149;
+  --paper: #0b1020;
+  --paper-2: #1a2235;
+  --surface: #111827;
+  --ink: #f1f5f9;
+  --ink-muted: #94a3b8;
+  --ink-subtle: #64748b;
+  --line: #1f2937;
+  --line-strong: #334155;
 
-  --accent: #3ba6a6;
-  --accent-hover: #55b7b7;
-  --accent-soft: #163332;
-  --accent-ink: #051615; /* white on #3ba6a6 is < 3:1, so dark text */
+  --accent: #4f46e5; /* same fill as light: white text stays readable */
+  --accent-hover: #6366f1;
+  --accent-soft: #1e1b4b;
+  --accent-ink: #ffffff;
+  --accent-fg: #a5b4fc; /* indigo-300: readable as text on dark surfaces */
+  --accent-2: #8b5cf6;
 
-  --danger: #ef8a80;
-  --danger-hover: #f4a49c;
-  --danger-soft: #3a1e1b;
-  --danger-ink: #1f0a08;
-  --warning: #e2b257;
-  --warning-soft: #352a13;
-  --success: #6cc08d;
-  --success-soft: #16301f;
-  --info: #7fb0e0;
-  --info-soft: #162536;
+  --danger: #f87171;
+  --danger-hover: #fca5a5;
+  --danger-soft: #3b1219;
+  --danger-ink: #1f0a0a;
+  --warning: #fbbf24;
+  --warning-soft: #3a2a0a;
+  --success: #34d399;
+  --success-soft: #0b2e24;
+  --info: #7dd3fc;
+  --info-soft: #0b2536;
 
-  --overlay: rgb(0 0 0 / 0.6);
-  --elevation-overlay: 0 1px 2px rgb(0 0 0 / 0.4), 0 16px 40px -8px rgb(0 0 0 / 0.65);
+  --overlay: rgb(2 6 23 / 0.7);
+  --elevation-card: 0 1px 2px rgb(0 0 0 / 0.3);
+  --elevation-overlay: 0 4px 12px -4px rgb(0 0 0 / 0.4), 0 20px 48px -8px rgb(0 0 0 / 0.6);
 }
 
 /* `dark:` utilities follow data-theme (set by the theme script), not only the OS setting. */
@@ -78,6 +84,26 @@
 /* Entrance animation in pure CSS: content is visible without JavaScript (no hidden-until-hydrated). */
 @theme {
   --animate-rise: rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  /* Unread notifications: a slow halo behind the count, and one bell swing when something new arrives. */
+  --animate-ping-slow: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  --animate-bell-ring: bell-ring 0.9s ease-in-out 1;
+
+  @keyframes ping-slow {
+    75%,
+    100% {
+      transform: scale(1.9);
+      opacity: 0;
+    }
+  }
+
+  @keyframes bell-ring {
+    0%, 100% { transform: rotate(0); }
+    15% { transform: rotate(14deg); }
+    30% { transform: rotate(-12deg); }
+    45% { transform: rotate(8deg); }
+    60% { transform: rotate(-6deg); }
+    75% { transform: rotate(3deg); }
+  }
 
   @keyframes rise {
     from {
@@ -104,6 +130,8 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
   --color-accent-ink: var(--accent-ink);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-2: var(--accent-2);
   --color-danger: var(--danger);
   --color-danger-hover: var(--danger-hover);
   --color-danger-soft: var(--danger-soft);
@@ -116,50 +144,52 @@
   --color-info-soft: var(--info-soft);
   --color-overlay: var(--overlay);
 
-  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", monospace;
 
-  /* Section labels: 11px uppercase with tracking. Page titles: 22px. */
+  /* Section labels: 11px uppercase with tracking. Page titles: 22px semibold. */
   --text-label: 0.6875rem;
   --text-label--line-height: 1rem;
   --text-label--letter-spacing: 0.07em;
   --text-title: 1.375rem;
   --text-title--line-height: 1.875rem;
-  --text-title--letter-spacing: -0.01em;
+  --text-title--letter-spacing: -0.02em;
 
-  --radius-control: 6px; /* buttons, inputs, badges */
-  --radius-panel: 10px; /* tables, cards, dialogs (never pill-shaped) */
+  --radius-control: 8px; /* buttons, inputs */
+  --radius-panel: 12px; /* cards, tables, dialogs, popovers */
 
-  --shadow-overlay: var(--elevation-overlay); /* only dialogs, popovers, toasts */
+  --shadow-card: var(--elevation-card); /* cards, tables, sidebar items */
+  --shadow-overlay: var(--elevation-overlay); /* dialogs, popovers, toasts */
 
   --ease-clinical: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* Visible keyboard focus on every interactive element (never removed without this replacement). */
+/* Thin, theme-coloured scrollbar for inner scroll areas (main content on laptops, table bodies). */
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
 @utility focus-ring {
   outline: 2px solid transparent;
   outline-offset: 2px;
   &:focus-visible {
-    outline-color: var(--accent);
+    outline-color: var(--accent-fg);
   }
-}
-
-/* Ruled-ledger paper: faint horizontal rules plus a double margin line (login brand panel). */
-@utility ledger-lines {
-  background-image:
-    linear-gradient(to right, transparent 3.5rem, color-mix(in oklab, currentColor 22%, transparent) 3.5rem,
-      color-mix(in oklab, currentColor 22%, transparent) calc(3.5rem + 1px), transparent calc(3.5rem + 1px),
-      transparent calc(3.5rem + 4px), color-mix(in oklab, currentColor 22%, transparent) calc(3.5rem + 4px),
-      color-mix(in oklab, currentColor 22%, transparent) calc(3.5rem + 5px), transparent calc(3.5rem + 5px)),
-    repeating-linear-gradient(to bottom, transparent 0, transparent 31px,
-      color-mix(in oklab, currentColor 10%, transparent) 31px, color-mix(in oklab, currentColor 10%, transparent) 32px);
 }
 
 @layer base {
   html {
-    /* Reserve the scrollbar's space so locking scroll (dialogs) doesn't shift the layout. */
+    /* Phones / tablets scroll the window: reserve the scrollbar's space so locking scroll (dialogs)
+       doesn't shift the layout. From lg the app fits the viewport and never scrolls the window, so no
+       gutter there (it would leave an empty strip on the right). */
     scrollbar-gutter: stable;
     -webkit-text-size-adjust: 100%;
+
+    @media (min-width: 1024px) {
+      scrollbar-gutter: auto;
+    }
   }
 
   body {

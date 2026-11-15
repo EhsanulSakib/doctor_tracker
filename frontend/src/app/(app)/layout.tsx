@@ -22,7 +22,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
       <Sidebar />
 
-      <div className="flex min-h-dvh flex-col transition-[padding] duration-200 ease-clinical md:pl-16 lg:pl-60 lg:sidebar-collapsed:pl-16">
+      {/* Phones / tablets: normal window scrolling. lg and up: exactly one viewport tall, no window
+          scrollbar; only <main> scrolls (thin scrollbar) if a page is ever taller than the screen. */}
+      <div className="flex min-h-dvh flex-col transition-[padding] duration-200 ease-clinical md:pl-16 lg:h-dvh lg:pl-60 lg:sidebar-collapsed:pl-16">
         <Topbar
           userSlot={
             <Suspense fallback={<UserMenuSkeleton />}>
@@ -30,7 +32,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             </Suspense>
           }
         />
-        <main id="main" tabIndex={-1} className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 outline-none sm:px-6 lg:px-8 lg:py-8">
+        <main
+          id="main"
+          tabIndex={-1}
+          className="flex w-full flex-1 flex-col px-4 py-5 outline-none scrollbar-thin sm:px-6 lg:min-h-0 lg:overflow-y-auto lg:py-6"
+        >
           {children}
         </main>
       </div>

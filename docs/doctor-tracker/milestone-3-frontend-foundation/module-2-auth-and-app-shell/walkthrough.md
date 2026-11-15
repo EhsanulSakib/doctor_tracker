@@ -112,6 +112,16 @@ Backend stopped: pages render with shell and content, the account menu shows its
 | `/auth/me` failure would take down the whole shell | fallback menu, `unstable_rethrow` for Next's control flow |
 | Unused eslint-disable in `logout.ts` | removed (rule only fires on string literals) |
 
+## Update: the top bar redesign (2026-11-15)
+Feedback: drop the page title, keep the breadcrumb, add a clock with calendar and time zones and a notification bell. Ideas worth knowing:
+
+- **Time without hydration errors.** The server can't know the visitor's "now", so `useNow()` reads time through `useSyncExternalStore` with a server snapshot of `null`: the server and the hydration pass render a placeholder, then React re-renders with the real time. The snapshot is a number that only changes once per minute (or second), so components re-render exactly that often; one shared timer is aligned to the start of each minute and re-checks when a background tab becomes visible.
+- **Fixed boxes stop layout shift.** "9:59 AM" → "10:00 AM", the placeholder → real time, 0 → 12 unread: each changes width. The clock button has one fixed width per breakpoint, the badge is an absolutely positioned 18px circle ("9+" keeps two characters inside it), and the account button already had its fixed box. Measured CLS: 0.
+- **Preferences in `localStorage`, read safely.** The time-zone list is a string snapshot in `useSyncExternalStore` (stable between changes, unlike a parsed object), parsed and validated on read (unknown zones dropped), and the `storage` event keeps other tabs in sync.
+- **Intl does the time-zone work.** `Intl.supportedValuesOf("timeZone")` lists ~420 zones; `timeZoneName: "longOffset"` gives the UTC offset for any instant (so DST is right), `"long"` gives searchable names like "Bangladesh Standard Time"; formatters are cached because the panel re-renders every second.
+- **Editable combobox (WAI-ARIA APG).** Focus stays in the input; `aria-activedescendant` points at the highlighted option; the list lives inside the popover (no second floating layer); Escape is stopped at the combobox so it closes the search, not the panel.
+- **Polling politely.** The bell fetches after hydration (the shell stays static), every minute only while the tab is visible, on focus, and when a page calls `refreshNotifications()` after a change. "Seen" (stops the ping) is separate from "read" (clears the count).
+
 ## Checkpoint summary
 - Proxy guards every page and refreshes sessions silently; prefetches and the API are excluded; outages don't sign anyone out.
 - Sign-in page, responsive shell (sidebar / rail / drawer), theme and sidebar preferences without flashes, error / 404 / loading screens.

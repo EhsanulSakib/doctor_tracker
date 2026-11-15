@@ -5,6 +5,7 @@ import { paginate, toSkip, type Paginated } from '../../lib/pagination.js';
 import { endOfDay, startOfDay } from '../../lib/schemas.js';
 import { searchKeyFilter } from '../../lib/search-key.js';
 import { clearDashboardCache } from '../dashboard/dashboard.service.js';
+import { notificationCopy, notify, removeNotificationsFor } from '../notifications/notifications.service.js';
 import { PatientModel } from '../patients/patient.model.js';
 import { DoctorModel } from './doctor.model.js';
 import type { CreateDoctorInput, DoctorSort, ListDoctorsQuery, UpdateDoctorInput } from './doctors.schema.js';
@@ -97,6 +98,9 @@ async function countPatientsByDoctor(doctorIds: Types.ObjectId[]): Promise<Map<s
   return new Map(rows.map((row) => [row._id.toString(), row.count]));
 }
 
+/** Active → on leave / inactive: the admin may need to move this doctor's patients. */
+const becameUnavailable = (before: DoctorStatus, after: DoctorStatus) => before === 'active' && after !== 'active';
+
 async function findDoctorOrThrow(id: string) {
   const doctor = await DoctorModel.findById(id);
   if (!doctor) throw HttpError.notFound('Doctor');
@@ -133,17 +137,27 @@ export async function getDoctor(id: string): Promise<DoctorDto> {
 export async function createDoctor(input: CreateDoctorInput): Promise<DoctorDto> {
   const doctor = await DoctorModel.create(input);
   clearDashboardCache();
+  await notify(notificationCopy.doctorAdded({ id: doctor._id, name: doctor.name, specialization: doctor.specialization, hospital: doctor.hospital }));
   return toDoctorDto(doctor.toObject<DoctorRecord>(), 0);
 }
 
 export async function updateDoctor(id: string, input: UpdateDoctorInput): Promise<DoctorDto> {
   // Load + save (instead of findOneAndUpdate) so validation and the searchKey hook run.
   const doctor = await findDoctorOrThrow(id);
+  const previousStatus = doctor.status;
   doctor.set(input);
   await doctor.save();
   clearDashboardCache();
 
-  const patientCount = await PatientModel.countDocuments({ doctorId: doctor._id });
+  const status = doctor.status;
+  const [patientCount, activePatients] = await Promise.all([
+    PatientModel.countDocuments({ doctorId: doctor._id }),
+    becameUnavailable(previousStatus, status) ? PatientModel.countDocuments({ doctorId: doctor._id, status: { $ne: 'recovered' } }) : undefined,
+  ]);
+  if (activePatients !== undefined && status !== 'active') {
+    await notify(notificationCopy.doctorUnavailable({ id: doctor._id, name: doctor.name, status }, activePatients));
+  }
+
   return toDoctorDto(doctor.toObject<DoctorRecord>(), patientCount);
 }
 
@@ -161,6 +175,7 @@ export async function deleteDoctor(id: string): Promise<void> {
   const deleted = await DoctorModel.findByIdAndDelete(id);
   if (!deleted) throw HttpError.notFound('Doctor');
   clearDashboardCache();
+  await removeNotificationsFor(deleted._id);
 }
 
 export async function listHospitals(): Promise<string[]> {

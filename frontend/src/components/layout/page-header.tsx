@@ -1,21 +1,22 @@
 import type { ReactNode } from "react";
 
 type PageHeaderProps = {
+  /** The page's <h1>. Read by screen readers only: the topbar breadcrumb already shows where you are. */
   title: string;
-  description?: ReactNode;
-  /** Primary actions, e.g. "Add doctor". */
+  /** Primary actions, e.g. "New doctor" (right-aligned row above the content). */
   actions?: ReactNode;
 };
 
-/** The page's single <h1> with optional description and actions (stacked on phones). */
-export function PageHeader({ title, description, actions }: PageHeaderProps) {
+/**
+ * Every page still has exactly one <h1> (headings are how screen-reader users jump around), but it's
+ * visually hidden: the user wanted the breadcrumb in the top bar to be the only visible title.
+ * Renders nothing visible unless there are actions, so it takes no space and can't shift the layout.
+ */
+export function PageHeader({ title, actions }: PageHeaderProps) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0">
-        <h1 className="text-title font-semibold text-ink">{title}</h1>
-        {description && <p className="mt-1 text-sm text-ink-muted">{description}</p>}
-      </div>
-      {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
-    </div>
+    <>
+      <h1 className="sr-only">{title}</h1>
+      {actions && <div className="mb-4 flex flex-wrap items-center justify-end gap-2">{actions}</div>}
+    </>
   );
 }

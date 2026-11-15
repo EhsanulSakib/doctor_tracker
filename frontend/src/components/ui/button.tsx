@@ -11,10 +11,10 @@ const base =
   "active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 aria-busy:cursor-progress";
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-accent text-accent-ink hover:bg-accent-hover",
-  secondary: "border border-line-strong bg-surface text-ink hover:border-ink-subtle hover:bg-paper-2",
+  primary: "bg-accent text-accent-ink shadow-sm shadow-accent/25 hover:bg-accent-hover",
+  secondary: "border border-line bg-surface text-ink shadow-card hover:border-line-strong hover:bg-paper-2",
   ghost: "text-ink-muted hover:bg-paper-2 hover:text-ink",
-  danger: "bg-danger text-danger-ink hover:bg-danger-hover",
+  danger: "bg-danger text-danger-ink shadow-sm hover:bg-danger-hover",
 };
 
 // 36px tall with a mouse; 44px on touch screens (minimum comfortable touch target).

@@ -52,7 +52,7 @@ export function MobileNav() {
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex h-12 items-center gap-3 rounded-control px-3 text-[15px] font-medium transition-colors focus-ring",
-                    active ? "bg-accent-soft text-accent" : "text-ink-muted hover:bg-paper-2 hover:text-ink",
+                    active ? "bg-accent-soft text-accent-fg" : "text-ink-muted hover:bg-paper-2 hover:text-ink",
                   )}
                 >
                   <Icon size={20} />
@@ -67,7 +67,7 @@ export function MobileNav() {
       {user && (
         <div className="border-t border-line p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="mb-3 flex items-center gap-3">
-            <span aria-hidden className="flex size-9 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-accent">
+            <span aria-hidden className="flex size-9 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-accent-fg">
               {initialsOf(user.name)}
             </span>
             <div className="min-w-0">

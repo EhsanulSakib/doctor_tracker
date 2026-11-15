@@ -153,6 +153,27 @@ Setup: `cd backend && npm run seed` → `Seeded 127.0.0.1/doctor_tracker (today 
 
 **Result 2026-11-15:** `npm test` 82/82; seed checks passed; Atlas synced (users 1, doctors 15, patients 200).
 
+### 2.4 Notifications API
+Setup: `cd backend && npm run seed` (prints `notifications 30 (12 unread)`), start the API, log in (§ 1.2 step 3). `$B` = `http://localhost:8082`, `$J` = the cookie jar.
+
+| # | Scenario | Command | Expected |
+|---|---|---|---|
+| 1 | No session | `curl -i $B/api/notifications` | `401` |
+| 2 | List | `curl -b $J "$B/api/notifications"` | 20 items, newest first, `meta.unreadCount: 12`; titles like "New patient: …", "Dr. … is on leave", "… has recovered" |
+| 3 | Limit | `?limit=50` → 30 items; `?limit=0` / `?limit=51` | `400 VALIDATION_ERROR` |
+| 4 | Mark one read | `curl -b $J -X PATCH $B/api/notifications/<id>/read` twice | both `200`, `read: true`; `unreadCount` drops by 1 only once |
+| 5 | Unknown / invalid id | `PATCH …/64b7f0000000000000000000/read`, `PATCH …/abc/read` | `404 NOT_FOUND`, `400` |
+| 6 | Mark all read | `curl -b $J -X POST $B/api/notifications/read-all` | `{ data: { updated: n } }`, then `unreadCount: 0`; again → `updated: 0` |
+| 7 | New doctor | create a doctor (§ 2.1) | newest item "New doctor: Dr. …" / "{specialization} · {hospital}" |
+| 8 | Doctor unavailable | `PATCH /api/doctors/<id> { "status": "on_leave" }` on an active doctor with patients | "Dr. … is on leave" / "{n} patients still assigned" (not counting recovered); a hospital edit adds nothing |
+| 9 | New patient | create a patient via `/api/patients` and via `/api/doctors/:id/patients` | "New patient: …" / "Assigned to Dr. … ({specialization})" each time |
+| 10 | Recovered + moved | `PATCH /api/patients/<id> { "status": "recovered", "doctorId": "<other>" }` | two items: "… has recovered" and "… moved to Dr. …" / "Previously with Dr. …" |
+| 11 | Cleanup | delete that patient | its notifications disappear from the list |
+| 12 | Index usage | `npm run db:explain` | 25 lines `✓ index`; unread count `COUNT_SCAN(readAt_1_createdAt_-1)` with 0 docs; `✓ TTL … 30 days` |
+| 13 | Atlas | `npm run db:sync` (preview) | `notifications 30 → replaces 30` |
+
+**Result 2026-11-15:** `npm test` 98/98 (16 notification tests cover #1–#11 through the real endpoints); seed + `db:explain` as expected; read-only check through the running API: 30 items, `unreadCount: 12`, `limit=0` → 400; Atlas synced (notifications 30). Scenarios #4–#11 change data: re-run `npm run seed` afterwards to get the 12 unread back.
+
 ### 3.1 Frontend scaffold + design system
 From `frontend/`: `npm install` once.
 
@@ -191,10 +212,51 @@ Start the API (`cd backend && npm run dev`) and the frontend (`cd frontend && np
 | 13 | Keyboard | Tab from the top of a page | first stop "Skip to main content"; visible focus ring everywhere; drawer and account menu trap / return focus |
 | 14 | API outage | stop the API while signed in, reload | page and shell still render; account icon shows a warning with "Sign out"; you are not signed out |
 | 15 | 404 | open `/nope` | styled "Page not found" with a link to the dashboard |
+| 16 | No window scrollbar on laptops | window at 1920×1080, 1440×900, 1366×768 and 1280×720; open `/login`, `/dashboard`, `/doctors`, `/patients` | no browser scrollbar and no empty strip on the right; only the content area would scroll if a page were taller |
+| 17 | No layout shift while loading | devtools → Network → "Slow 4G", reload `/dashboard` | the account-button and page skeletons sit exactly where the real content appears; nothing jumps when it arrives (Performance panel → Layout shifts: none) |
+| 18 | Page title | open `/dashboard`, `/doctors`, `/patients` | no title above the content; the top bar shows `Doctor Tracker › <page>` (phones: page name next to the menu button); a screen reader still finds one heading level 1 |
+| 19 | Clock | look at the top right | current Bangladesh time, date and "Dhaka" (laptop); time only on tablets; clock icon on phones; nothing jumps when the page loads |
+| 20 | Calendar | click the clock | today is highlighted; next / previous month work; "Today" brings you back |
+| 21 | Time zones | in the clock panel: Add time zone → type "tok" → Enter; star Tokyo; reload | Tokyo listed as "3h ahead"; after starring, the top bar shows Tokyo time; still there after reload; × removes it (the main clock can't be removed); Escape in the search closes only the search |
+| 22 | Bell count | after `npm run seed` | bell shows a round red "9+" (12 unread) with a slow ping; with 1–9 unread the number sits in the same circle |
+| 23 | Notifications | open the bell, click an item | panel lists the latest 20 (unread tinted, with a dot); the ping stops once opened; clicking opens the doctor's page or the patients list filtered to that patient, and the count drops by one |
+| 24 | Mark all as read | open the bell → Mark all as read, reload | badge gone, no unread rows, still read after reload; run `npm run seed` to get the unread ones back |
 
 Automated equivalents ran on 2026-11-15: an end-to-end script against the production build + API (22 checks: redirects, `next`, open-redirect guard, refresh with fresh / missing / expiring tokens, prefetch without refresh, logout, revoked / garbage tokens) and a headless-Chrome run of the UI (26 checks: scenarios 1–3, 5, 9–13 and the drawer). Prefetch requests skip the proxy: compare a link hover (prefetch, no Set-Cookie) with a click (navigation, refresh if needed).
 
 **Result 2026-11-15:** 22/22 + 26/26; the API outage behaved as in #14.
+
+**Layout re-check 2026-11-15** (after the no-scrollbar / skeleton change, headless Chrome, production build): 20/20. #16 at all four sizes for all four pages (`scrollHeight` = viewport height, no gutter); CLS 0.0000 on every load (layout-shift observer from navigation start, so the streamed account menu replacing its skeleton is counted); account button 176px; page-header and card skeletons measured equal to the real components (50px and 184.5px). The 26-check UI run passed again.
+
+**Top bar re-check 2026-11-15** (headless Chrome, production build, API on 8082): 20/20 top bar checks (#18–#24: hidden `<h1>`, 13px breadcrumb, Plus Jakarta Sans, Dhaka time, round 18px "9+" badge with ping, 42-day calendar with today marked, month navigation + Today, keyboard add of Tokyo with "3h ahead", main-clock switch kept after reload, Escape closing only the search, bell panel focus + 20 items + 12 unread, ping stopping on open, click → page + count 11, mark all read kept after reload, phone 44px targets and on-screen panel); layout 20/20 (no window scrollbar at 4 laptop sizes, CLS 0 with clock, bell and account menu filling in); UI 26/26. Data reseeded afterwards.
+
+### 4.1 Doctors UI
+Start the API and the frontend (see 3.2), sign in, open **Doctors**. `npm run seed` afterwards restores the demo data.
+
+| # | Scenario | Steps | Expected |
+|---|---|---|---|
+| 1 | List | open /doctors | 10 doctors, "Showing 1–10 of 15", no window scrollbar on a laptop; each row: avatar, name + email, specialization (+ hospital), status, experience, patients, joined, edit / delete |
+| 2 | Search | type "hasan" | after a short pause only matching doctors; the cursor stays in the box; Escape clears it |
+| 3 | Quick filters | (wide screen) pick a specialization, then a status | list narrows; each shows as a token with ×; × removes it; "Clear all" removes all |
+| 4 | Filters dialog | Filters → status On leave, experience from 5 → Show results | only on-leave doctors with ≥ 5 years; tokens "On leave", "Experience 5 yrs or more"; Cancel / Escape changes nothing |
+| 5 | Bad URL | open `/doctors?status=nope&page=-3&limit=999&expMin=40&expMax=10` | no error: the invalid status, page, page size, sort and date are ignored; experience 40+ is valid and kept (shown as a token), the smaller maximum is dropped; without the experience part it is the normal first page of 10 |
+| 6 | Sort | click the Experience header twice | most experienced first, then least; the arrow shows the direction |
+| 7 | Paging | next page, then Rows → 20 | "Showing 11–15 of 15"; with 20 rows you're back on page 1, the table scrolls inside and its header stays put |
+| 8 | Create | New doctor → Add doctor with everything empty | 7 fields show what's missing; fill them in → toast "Doctor added", the doctor tops the list, the bell gets one more unread |
+| 9 | Duplicate email | add another doctor with the same email | "A record with this email already exists" under Email |
+| 10 | Edit | pencil on a row → change years → Save changes | toast, row updated |
+| 11 | Delete guard | trash on a doctor with patients | "… can't be deleted yet" with the patient count and "View patients" (no delete button) |
+| 12 | Delete | trash on a doctor without patients → Delete doctor | toast, row gone, total −1 |
+| 13 | Profile | click a doctor's name | breadcrumb "Doctors › Dr. …"; name, status, specialization · hospital, phone / email links, experience, joined; stat tiles add up (active + under treatment + recovered = patients) |
+| 14 | Profile patients | filter status Recovered; sort by Admitted; page | total equals the Recovered tile; works like the list |
+| 15 | Add patient | Add patient → fill in → Add patient | toast; patient in the table; Patients tile +1; bell +1 |
+| 16 | Edit / delete patient | pencil → change age → Save; trash → Delete patient | row updated; then gone and the tile back |
+| 17 | Delete from profile | profile of a doctor without patients → Delete → confirm | back on /doctors, doctor gone |
+| 18 | Not found | open `/doctors/000000000000000000000000` and `/doctors/abc` | "Doctor not found" with "Back to doctors" |
+| 19 | Loading | DevTools → Network "Slow 4G", click Doctors in the sidebar | a skeleton in the same places as the real toolbar, table rows and pagination; nothing jumps when data arrives |
+| 20 | Phone | ~390px wide | cards with every field, no sideways scroll; filter and + buttons as icons; Filters opens from the bottom |
+
+**Result 2026-11-15 (headless Chrome, production build):** 32/32 automated (scenarios 1–4, 6–16, 18–20, plus focus staying in the search box, `aria-sort`, sticky header, layout at 1366×768 and skeleton geometry: header 45px / row 61px / same position as the real table). Regressions: layout 20/20, UI 26/26, top bar 20/20. #5 and #17 checked separately (bad URL handled as described; deleting from the profile returns to /doctors with the doctor gone).
 
 ## Edge-case checklist (global)
 - [x] Every protected endpoint returns 401 without a cookie (`/api/auth/me`, `/api/doctors/*`, `/api/patients/*`, `/api/dashboard/*`)

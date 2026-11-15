@@ -30,21 +30,26 @@ Form, chart and JWT libraries (react-hook-form, recharts, jose) come with the mo
 
 Bundled docs for this exact version live in `frontend/node_modules/next/dist/docs/` (see `02-guides/authentication-with-cache-components.md` for module 3.2).
 
-## Design tokens ("Clinical ledger")
+## Design update (2026-11-15, user feedback)
+The original "Clinical ledger" palette (paper / ink / teal, IBM Plex) was replaced at the user's request with a modern **slate + indigo / violet** look: Inter font (switched to Plus Jakarta Sans later that day with the top bar redesign, see 3.2), 8 / 12 px radii, soft card shadows, full-width content with tighter padding. The token names stayed the same, so components only changed where noted (`text-accent` → `text-accent-fg`, new `Card`, pill badges).
+
+## Design tokens (current)
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `paper` | `#FAF9F6` | `#121417` | app background |
-| `paper-2` | `#F2F0EB` | `#1C1F24` | hover / subtle fill, table header |
-| `surface` | `#FFFFFF` | `#181B1F` | tables, cards, dialogs |
-| `ink` | `#1C1F23` | `#E8E6E1` | primary text |
-| `ink-muted` | `#5D6670` | `#9AA2AB` | secondary text |
-| `ink-subtle` | `#757D86` | `#79818B` | placeholders, disabled |
-| `line` / `line-strong` | `#E6E3DC` / `#D3CEC3` | `#2A2F35` / `#3B4149` | hairlines / input borders |
-| `accent` (+ `-hover`, `-soft`, `-ink`) | `#0F6E6E` · ink `#FFF` | `#3BA6A6` · ink `#051615` | primary actions, focus, selection (white on the dark-theme teal is < 3:1, so dark text) |
-| `danger` / `warning` / `success` / `info` (+ `-soft`) | `#B4372F` / `#8F6209` / `#2C7548` / `#2D5E8C` | `#EF8A80` / `#E2B257` / `#6CC08D` / `#7FB0E0` | statuses, destructive actions |
-| `overlay` | ink at 36% | black at 60% | dialog backdrop |
+| `paper` | `#F8FAFC` | `#0B1020` | app background |
+| `paper-2` | `#F1F5F9` | `#1A2235` | hover / subtle fill |
+| `surface` | `#FFFFFF` | `#111827` | sidebar, top bar, cards, tables, dialogs |
+| `ink` | `#0F172A` | `#F1F5F9` | primary text |
+| `ink-muted` | `#64748B` | `#94A3B8` | secondary text |
+| `ink-subtle` | `#94A3B8` | `#64748B` | placeholders, decorative icons, disabled (not for body text) |
+| `line` / `line-strong` | `#E2E8F0` / `#CBD5E1` | `#1F2937` / `#334155` | borders / input borders |
+| `accent` (+ `-hover`, `-soft`, `-ink`) | `#4F46E5` indigo-600 · ink `#FFF` | same fill · soft `#1E1B4B` | buttons, selected nav, chips |
+| `accent-fg` | `#4F46E5` | `#A5B4FC` | accent used **as text / icon** (indigo-600 is too dark on dark surfaces) |
+| `accent-2` | `#7C3AED` violet-600 | `#8B5CF6` | brand gradient partner (logo mark) |
+| `danger` / `warning` / `success` / `info` (+ `-soft`) | `#B91C1C` / `#B45309` / `#047857` / `#0369A1` | `#F87171` / `#FBBF24` / `#34D399` / `#7DD3FC` | statuses, destructive actions |
+| `overlay` | slate-900 at 45% | slate-950 at 70% | dialog backdrop |
 
-Text/background pairs meet WCAG AA (4.5:1), including badge text on its soft background. Radius: `rounded-control` 6px, `rounded-panel` 10px. Shadow `shadow-overlay` only on dialogs, popovers, toasts. Ease `ease-clinical` = `cubic-bezier(0.2, 0.8, 0.2, 1)`. Type sizes: `text-label` (11px uppercase, tracked), `text-title` (22px). Theme switch: `data-theme="dark"` on `<html>`; `dark:` utilities follow it.
+Text/background pairs meet WCAG AA (4.5:1), including badge text on its soft background. Radius: `rounded-control` 8px, `rounded-panel` 12px. Shadows: `shadow-card` (cards, tables, secondary buttons), `shadow-overlay` (dialogs, popovers, toasts). Ease `ease-clinical` = `cubic-bezier(0.2, 0.8, 0.2, 1)`. Type: Inter (variable) for UI, JetBrains Mono for codes; `text-label` (11px uppercase), `text-title` (22px). Theme switch: `data-theme="dark"` on `<html>`; `dark:` utilities follow it.
 
 ## Bangladesh conventions (user requirement, 2026-11-15)
 | What | Choice |

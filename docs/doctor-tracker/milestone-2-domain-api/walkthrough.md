@@ -8,6 +8,7 @@
 | 2.1 Doctors API | done | [module-1-doctors-api/walkthrough.md](module-1-doctors-api/walkthrough.md) |
 | 2.2 Patients API | done | [module-2-patients-api/walkthrough.md](module-2-patients-api/walkthrough.md) |
 | 2.3 Dashboard API + seed | done | [module-3-dashboard-api-and-seed/walkthrough.md](module-3-dashboard-api-and-seed/walkthrough.md) |
+| 2.4 Notifications API (added 2026-11-15) | done | [module-4-notifications-api/walkthrough.md](module-4-notifications-api/walkthrough.md) |
 
 ## Files added
 ```
@@ -24,7 +25,8 @@ backend/src/
 │   │   ├── patient.model.ts           2.1 (+ name index in 2.2)
 │   │   └── patients.{schema,service,controller,routes}.ts   2.2
 │   └── dashboard/
-│       └── dashboard.{schema,service,controller,routes}.ts  2.3
+│       ├── dashboard.{schema,service,controller,routes}.ts  2.3
+│       └── notification.model.ts + notifications.{schema,service,controller,routes}.ts  2.4
 └── scripts/
     ├── explain-queries.ts             2.1 (+ patients 2.2, dashboard 2.3)
     ├── seed.ts                        2.3
@@ -32,6 +34,7 @@ backend/src/
 backend/tests/doctors.test.ts          2.1
 backend/tests/patients.test.ts         2.2
 backend/tests/dashboard.test.ts        2.3
+backend/tests/notifications.test.ts    2.4
 ```
 
 ## File index
@@ -56,16 +59,21 @@ backend/tests/dashboard.test.ts        2.3
 | `src/modules/dashboard/dashboard.service.ts` | 2.3 | aligned ranges, 10 parallel index-only queries, zero-fill, 60 s promise cache |
 | `src/modules/dashboard/dashboard.controller.ts` | 2.3 | HTTP layer |
 | `src/modules/dashboard/dashboard.routes.ts` | 2.3 | `/api/dashboard/stats`, admin only |
+| `src/modules/notifications/notification.model.ts` | 2.4 | notification schema: list / unread / cleanup indexes + 30-day TTL |
+| `src/modules/notifications/notifications.service.ts` | 2.4 | event copy, failure-isolated `notify()`, list + unread count, mark read / all |
+| `src/modules/notifications/notifications.{schema,controller,routes}.ts` | 2.4 | `limit` validation, HTTP layer, `/api/notifications` (admin only) |
 | `src/scripts/explain-queries.ts` | 2.1 · 2.2 · 2.3 | `npm run db:explain`: the index behind each query (22 queries) |
 | `src/scripts/seed.ts` | 2.3 | `npm run seed`: repeatable demo data |
 | `src/scripts/db-sync.ts` | 2.3 | `npm run db:sync`: keep local and Atlas identical |
 | `tests/doctors.test.ts` | 2.1 | 22 doctor API tests |
 | `tests/patients.test.ts` | 2.2 | 26 patient API tests |
 | `tests/dashboard.test.ts` | 2.3 | 8 dashboard tests |
+| `tests/notifications.test.ts` | 2.4 | 16 notification tests |
 
 Milestone 1 files changed in 2.1: `routes.ts`, `middleware/error-handler.ts` (one message per field), `modules/auth/password.ts` (fast bcrypt in tests), `tests/setup.ts`, `tests/helpers.ts`, `package.json`, `.gitignore`.
 Files changed in 2.2: `routes.ts`, `doctors/doctors.routes.ts` (nested routes), `patients/patient.model.ts` (name index), `lib/schemas.ts` (`clearableField`), `tests/helpers.ts` (`patientPayload`).
 Files changed in 2.3: `routes.ts`, `doctors/doctors.service.ts` + `patients/patients.service.ts` (clear the dashboard cache on writes), `config/env.ts` (`SYNC_TARGET_URI`), `.env.example`, `package.json` (`seed`, `db:sync`, faker).
+Files changed in 2.4: `constants/enums.ts`, `routes.ts`, `doctors/doctors.service.ts` + `patients/patients.service.ts` (notification events + cleanup), `scripts/seed.ts` (30 notifications), `scripts/db-sync.ts` (copies `notifications`), `scripts/explain-queries.ts` (+3 queries, TTL check).
 
 ## Query-optimization patterns introduced here
 1. **Anchored lowercase regex on a multikey `searchKey`** instead of `/term/i` scans.
@@ -78,3 +86,5 @@ Files changed in 2.3: `routes.ts`, `doctors/doctors.service.ts` + `patients/pati
 8. **Limit before `$lookup`**: top-10 first, then fetch 10 names (2.3).
 9. **Cache the promise**: one computation for concurrent requests, cleared on writes (2.3).
 10. **Verify with `explain()`**: `npm run db:explain`.
+11. **TTL index for data that expires**: notifications delete themselves after 30 days (2.4).
+12. **Side effects after the main write, never failing it**: notifications are written in try/catch after the save (2.4).

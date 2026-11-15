@@ -8,6 +8,16 @@ import { Popover } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { logout } from "@/features/auth/logout";
 import type { PublicUser } from "@/lib/api/types";
+import { cn } from "@/lib/utils";
+
+/**
+ * One fixed-size box for the trigger, its loading skeleton and its fallback: the account menu streams in
+ * after the shell, and a size change would push the theme toggle sideways (layout shift).
+ * Phones: a square avatar button. From `sm`: 176px with avatar, name (truncated) and chevron.
+ */
+const TRIGGER_BOX =
+  "flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-control pointer-coarse:h-11 pointer-coarse:w-11 " +
+  "sm:w-44 sm:justify-start sm:pl-1 sm:pr-2 sm:pointer-coarse:w-44";
 
 /** "Nusrat Jahan" → "NJ". */
 export const initialsOf = (name: string) =>
@@ -31,13 +41,13 @@ export function UserMenu({ user }: { user: PublicUser }) {
           {...props}
           type="button"
           aria-label={`Account: ${user.name}`}
-          className="flex h-9 items-center gap-2 rounded-control pl-1 pr-1.5 transition-colors hover:bg-paper-2 focus-ring pointer-coarse:h-11 sm:pr-2"
+          className={cn(TRIGGER_BOX, "transition-colors hover:bg-paper-2 focus-ring")}
         >
-          <span aria-hidden className="flex size-7 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent">
+          <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-fg">
             {initialsOf(user.name)}
           </span>
-          <span className="hidden max-w-36 truncate text-sm font-medium text-ink sm:block">{user.name}</span>
-          <ChevronDownIcon className="hidden text-ink-subtle sm:block" />
+          <span className="hidden min-w-0 flex-1 truncate text-left text-sm font-medium text-ink sm:block">{user.name}</span>
+          <ChevronDownIcon className="hidden shrink-0 text-ink-subtle sm:block" />
         </button>
       )}
     >
@@ -81,14 +91,17 @@ export function UserMenuFallback() {
           {...props}
           type="button"
           aria-label="Account (details unavailable)"
-          className="flex size-9 items-center justify-center rounded-control text-warning transition-colors hover:bg-paper-2 focus-ring pointer-coarse:size-11"
+          className={cn(TRIGGER_BOX, "transition-colors hover:bg-paper-2 focus-ring")}
         >
-          <AlertTriangleIcon size={18} />
+          <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-full bg-warning-soft text-warning">
+            <AlertTriangleIcon size={15} />
+          </span>
+          <span className="hidden min-w-0 flex-1 truncate text-left text-sm font-medium text-ink sm:block">Account</span>
+          <ChevronDownIcon className="hidden shrink-0 text-ink-subtle sm:block" />
         </button>
       )}
     >
-      <p className="text-sm text-ink">Your account details couldn&apos;t be loaded.</p>
-      <p className="mt-1 text-[13px] text-ink-muted">The server may be unavailable. Refresh in a moment.</p>
+      <p className="text-sm text-ink">Couldn&apos;t load your account.</p>
       <Button
         variant="secondary"
         fullWidth
@@ -108,9 +121,10 @@ export function UserMenuFallback() {
 
 export function UserMenuSkeleton() {
   return (
-    <div className="flex h-9 items-center gap-2 px-1" aria-hidden>
-      <Skeleton className="size-7 rounded-full" />
-      <Skeleton className="hidden h-3.5 w-24 sm:block" />
+    <div className={TRIGGER_BOX} aria-hidden>
+      <Skeleton className="size-7 shrink-0 rounded-full" />
+      <Skeleton className="hidden h-3.5 flex-1 sm:block" />
+      <span className="hidden size-4 shrink-0 sm:block" />
     </div>
   );
 }

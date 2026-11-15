@@ -4,6 +4,7 @@ import { apiLimiter } from './middleware/rate-limit.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { dashboardRouter } from './modules/dashboard/dashboard.routes.js';
 import { doctorsRouter } from './modules/doctors/doctors.routes.js';
+import { notificationsRouter } from './modules/notifications/notifications.routes.js';
 import { patientsRouter } from './modules/patients/patients.routes.js';
 
 export const apiRouter = Router();
@@ -24,3 +25,4 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use('/doctors', doctorsRouter);
 apiRouter.use('/patients', patientsRouter);
 apiRouter.use('/dashboard', dashboardRouter);
+apiRouter.use('/notifications', notificationsRouter);

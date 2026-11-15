@@ -39,3 +39,18 @@ export type DoctorStatus = (typeof DOCTOR_STATUSES)[number];
 export type Condition = (typeof CONDITIONS)[number];
 export type PatientStatus = (typeof PATIENT_STATUSES)[number];
 export type Gender = (typeof GENDERS)[number];
+
+/** Events that show up in the topbar bell (see modules/notifications). */
+export const NOTIFICATION_TYPES = [
+  'patient_admitted',
+  'patient_recovered',
+  'patient_reassigned',
+  'doctor_added',
+  'doctor_unavailable',
+] as const;
+
+/** What a notification is about; decides where the frontend links it. */
+export const NOTIFICATION_SUBJECT_KINDS = ['doctor', 'patient'] as const;
+
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+export type NotificationSubjectKind = (typeof NOTIFICATION_SUBJECT_KINDS)[number];

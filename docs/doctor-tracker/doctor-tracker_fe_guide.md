@@ -9,6 +9,10 @@ Next.js 16.4 App Router (Cache Components, Partial Prefetching, React Compiler) 
 - **Cache Components:** a component that calls `serverFetch` (it reads cookies) must sit inside `<Suspense>` or a route with `loading.tsx`, or `next build` fails. Don't `await` session/data at a layout's top level; push it into a component inside a boundary.
 - **React Compiler is on:** don't hand-write `useMemo`/`useCallback`/`memo` for performance. Lint enforces React 19 rules: no synchronous `setState` inside effects, no reading `ref.current` during render.
 - **Colours only through tokens** (`bg-surface`, `text-ink-muted`, `border-line`, `bg-accent`…), never hex values or Tailwind's palette. Merge classes with `cn()`.
+- **No window scrollbar from `lg` (1024px) up:** the shell is exactly one viewport tall (`lg:h-dvh`) and only `<main>` scrolls (`scrollbar-thin`). Design pages to fit the screen: long lists scroll inside their own region (table body), not the page. Phones and tablets scroll the window as usual. The login page follows the same rule (only the form side may scroll on a very short screen).
+- **Skeletons have the same box as the real content:** same heights, margins and fixed widths, so nothing moves when data arrives (measured CLS 0). Reuse `EmptyCardSkeleton` (`components/layout/page-skeleton.tsx`), `DataTable loading` (rows are 44px like real rows) and `UserMenuSkeleton` (shares `TRIGGER_BOX` with the real account button). A page with a different layout gets its own `loading.tsx` built from its real components' measurements.
+- **No visible page titles:** the top bar breadcrumb (`Doctor Tracker › Doctors`; the page name on phones) is the visible title. Still give every page `<PageHeader title="…" actions={…} />`: it renders the page's single `<h1>` for screen readers only (`sr-only`) and, if there are actions, a right-aligned row for them. Skeletons therefore start with the first block of the page, not a title row.
+- **After a create / update / delete, call `refreshNotifications()`** (`features/notifications/types.ts`): the bell reloads at once instead of at its next one-minute poll.
 - **Overlays** go through `<Portal>` (dialog z-50 · popover/listbox z-60 · toasts z-70). Modals make `#app-root` inert.
 - **Motion:** only `m.*` components (LazyMotion strict) with variants from `lib/motion.ts`.
 - **Bangladesh formatting:** use `formatDate` / `formatDateTime` / `formatNumber` / `todayIso` from `lib/utils.ts` (day-first dates, 12-hour time, lakh grouping, Asia/Dhaka "today"). Phone placeholder `PHONE_PLACEHOLDER` (`+880 1712-345678`).
@@ -84,6 +88,20 @@ Next.js 16.4 App Router (Cache Components, Partial Prefetching, React Compiler) 
 | Freshness | cached up to 60 s, cleared by any doctor / patient write through the API; `generatedAt` says when the numbers were computed |
 | Demo data | `npm run seed` → 15 doctors (11 active), 200 patients over the last 12 months |
 
+## Backend notifications contract (added in 2.4)
+| Thing | Value |
+|---|---|
+| List | `GET /api/notifications?limit=20` (1–50) → `{ data: Notification[], meta: { unreadCount } }`, newest first. `unreadCount` is for the whole inbox (badge: show "9+" above 9) |
+| Item | `{ id, type, title, message, subject: { kind: "doctor" \| "patient", id, name }, read: boolean, createdAt: ISO string }`. Show `title` (bold) + `message` (muted) as-is; they are final copy |
+| Types | `patient_admitted`, `patient_recovered`, `patient_reassigned`, `doctor_added`, `doctor_unavailable` (pick the icon / tone by type) |
+| Links | `subject.kind === "doctor"` → `/doctors/{subject.id}`; `"patient"` → the patients list searched by name (`/patients?search={subject.name}`), since there is no patient detail page |
+| Mark read | `PATCH /api/notifications/:id/read` → `{ data: Notification }` (idempotent; 404 if it expired or its subject was deleted: drop it from the list) |
+| Mark all | `POST /api/notifications/read-all` → `{ data: { updated } }` |
+| Shared inbox | read state is shared by every admin account; another admin can change the count. Refetch on open / focus / an interval rather than trusting local state |
+| When new ones appear | after doctor / patient writes through the API (new doctor, doctor leaves `active`, new patient, recovered, reassigned). Refresh the bell after the frontend's own mutations |
+| Lifetime | deleted after 30 days, or when their doctor / patient is deleted |
+| Demo data | `npm run seed` → 30 notifications over the last 7 days, 12 unread |
+
 ## State (Redux Toolkit)
 - `ui` slice _(built in 3.1)_: `sidebarCollapsed`, `mobileNavOpen`, `theme`, `dialog` (`{ id, entityId? } | null`); actions `sidebarToggled`, `sidebarCollapsedSet`, `mobileNavSet`, `themeSet`, `dialogOpened`, `dialogClosed`
 - `toast` slice _(built in 3.1)_: queue (max 4); use `const toast = useToast(); toast.success(title, description?)` / `.error` / `.info`
@@ -91,13 +109,14 @@ Next.js 16.4 App Router (Cache Components, Partial Prefetching, React Compiler) 
 - Store created per request (`StoreProvider`); typed `useAppDispatch` / `useAppSelector` from `@/store/hooks`.
 - Filter **drafts** live in local component state; **applied** filters live in the URL. Server data is never copied into Redux.
 
-## Design system — "Clinical ledger" (built in 3.1)
-- Tokens in `globals.css` (full table in module 3.1 `context.md`): `paper` / `paper-2` / `surface`, `ink` / `ink-muted` / `ink-subtle`, `line` / `line-strong`, `accent` (+ `-hover`, `-soft`, `-ink`), `danger` / `warning` / `success` / `info` (+ `-soft`), `overlay`. Dark theme via `data-theme="dark"` on `<html>`; `dark:` utilities follow it. All text pairs WCAG AA.
-- Type: IBM Plex Sans 400/500/600 (UI), IBM Plex Mono (IDs, phone numbers, figures), `tabular-nums` in tables/KPIs; `text-title` (22px) for page titles, `text-label` (11px uppercase) for section labels; body 14px, inputs 16px on phones.
-- Shape: `rounded-control` (6px), `rounded-panel` (10px); `shadow-overlay` only on dialogs, popovers, toasts; hairline borders everywhere else.
+## Design system — slate + indigo / violet (built in 3.1, redesigned 2026-11-15)
+- Tokens in `globals.css` (full table in module 3.1 `context.md`): `paper` / `paper-2` / `surface`, `ink` / `ink-muted` / `ink-subtle`, `line` / `line-strong`, `accent` (+ `-hover`, `-soft`, `-ink`), **`accent-fg`** (accent as text/icon — use it instead of `text-accent`), `accent-2` (violet, brand gradient), `danger` / `warning` / `success` / `info` (+ `-soft`), `overlay`. Dark theme via `data-theme="dark"` on `<html>`; `dark:` utilities follow it. All text pairs WCAG AA; `ink-subtle` is for placeholders/icons only.
+- Type: **Plus Jakarta Sans** (variable, `--font-jakarta`; replaced Inter on 2026-11-15 at the user's request) for UI, JetBrains Mono for codes/IDs, `tabular-nums` in tables/KPIs, clocks and counts; `text-title` (22px) for large headings (pages have no visible title), `text-label` (11px uppercase) for section labels; body 14px, inputs 16px on phones.
+- Shape: `rounded-control` (8px), `rounded-panel` (12px); `shadow-card` on cards / tables / secondary buttons, `shadow-overlay` on dialogs, popovers, toasts. Panels use `<Card>` (`components/ui/card.tsx`). Badges are pills (`rounded-full`, soft fill + inset ring).
+- Layout: content is full width (no max-width cap) with 16px / 24px side padding; white sidebar and top bar on a slate-50 page.
 - Sizes: 36px controls with a mouse, 44px on touch (`pointer-coarse:`).
 - Motion: 150–250 ms, `ease-clinical`; row stagger on new data, dialog/popover lift, toast slide; `reducedMotion="user"`. Planned: sidebar `layoutId` indicator (3.2), number count-up (4.3).
-- Avoid: gradients, glassmorphism, emoji icons, oversized rounded cards.
+- Avoid: emoji icons, decorative pills/badges for marketing copy, slogan-style text (the user prefers plain wording), glassmorphism. Gradients only for the logo mark and photo overlays.
 
 ## UI primitives (built in 3.1)
 | Component | Use |
@@ -109,11 +128,12 @@ Next.js 16.4 App Router (Cache Components, Partial Prefetching, React Compiler) 
 | `Select` | `value`, `onChange`, `options: { value, label, description? }[]`, `emptyOption="All statuses"` for filters; inside a Field pass `labelId`, otherwise `aria-label` |
 | `Badge` | `tone` neutral · accent · success · warning · danger · info; `dot`. Status tones: `DOCTOR_STATUS_TONES`, `PATIENT_STATUS_TONES` |
 | `Spinner` / `Skeleton` / `EmptyState` | loading and empty states (`label` on a standalone spinner) |
-| `Popover` | `trigger={(props) => <button {...props} />}`, children or `({ close }) => …`, `label` |
+| `Popover` | `trigger={(props) => <button {...props} />}`, children or `({ close }) => …`, `label`, `initialFocus: "first" | "panel"` (focus the panel itself when its first control is an action) |
+| `FormAlert` | form-level error box (`role=alert`), e.g. an API error that isn't tied to one field |
 | `Dialog` | `open`, `onClose`, `title`, `description`, `footer`, `size`, `dismissible` (false while saving), `initialFocusRef`. Bottom sheet on phones. A footer submit button targets a body form with `form="<id>"` |
 | `ConfirmDialog` | `onConfirm` may be async (spinner, not dismissible meanwhile); focus starts on Cancel; caller closes on success |
 | `Toaster` | mounted once in providers; use `useToast()` |
-| `DataTable` | `columns: Column<T>[]` (`header`, `cell`, `align`, `sort: { asc, desc, first? }`, `mobile: title · meta · field · hidden`, `className`), `rows`, `getRowId`, `caption`, `sort` + `sortHref` (URL) or `onSortChange`, `rowActions`, `loading`, `empty` |
+| `DataTable` | `columns: Column<T>[]` (`header`, `cell`, `align`, `sort: { asc, desc, first? }`, `mobile: title · meta · field · hidden`, `className` (also hides a column per breakpoint, e.g. `hidden xl:table-cell`), `skeleton` (loading cell with the real cell's box)), `fill` (laptops: take the remaining height, scroll inside, sticky header), `rows`, `getRowId`, `caption`, `sort` + `sortHref` (URL) or `onSortChange`, `rowActions`, `loading`, `empty` |
 | `Pagination` | `page`, `totalPages`, `total`, `limit`, `hrefForPage` (URL) or `onPageChange`, `onLimitChange` (10 · 20 · 50) |
 | `SearchInput` | `onSearch` debounced 300 ms (Enter = now, Escape = clear), `defaultValue`, `label`, `pending`; re-key to reset from outside |
 | `DateRangeField` | `value: { from?, to? }` (YYYY-MM-DD, inclusive), `onChange`, `label`; presets (last 7 / 30 / 90 days, 12 months, this year, last year) counted from today in Dhaka |
@@ -124,13 +144,39 @@ Next.js 16.4 App Router (Cache Components, Partial Prefetching, React Compiler) 
 app/layout.tsx            fonts, pre-paint theme/sidebar script, <Providers> (store, motion, toasts, #app-root)
 ├── (auth)/login          static sign-in page
 └── (app)/layout.tsx      skip link · <Sidebar> · <Topbar userSlot={<Suspense><CurrentUserMenu/></Suspense>}> · <main> · <MobileNav>
-    ├── loading.tsx       in-shell skeleton (Suspense boundary for pages)
+                          Topbar = breadcrumb | <WorldClock> <NotificationBell> <ThemeToggle> | account menu
+    ├── loading.tsx       in-shell skeleton, shaped like title + card (Suspense boundary for pages)
     ├── error.tsx         in-shell error with retry()
     └── dashboard · doctors · patients
 ```
-- New pages go under `app/(app)/…`, start with `<PageHeader title description actions>`, and fetch data in Server Components inside the route's `loading.tsx` boundary (or their own `<Suspense>`).
-- Layout components: `components/layout/` (sidebar, topbar, mobile-nav, user-menu, theme-toggle, page-header, brand, nav-items). Nav entries live in `nav-items.ts`.
+- New pages go under `app/(app)/…`, start with `<PageHeader title actions>` (title is screen-reader only), and fetch data in Server Components inside the route's `loading.tsx` boundary (or their own `<Suspense>`).
+- Layout components: `components/layout/` (sidebar, topbar, mobile-nav, user-menu, theme-toggle, page-header, page-skeleton, brand, nav-items). Nav entries live in `nav-items.ts`.
+- Top bar items (all fixed-size boxes, so nothing shifts while they fill in):
+  - `features/clock/world-clock.tsx`: main clock (Asia/Dhaka by default) → panel with a read-only month calendar (Sunday first, always 6 weeks) and the user's time zones (add by searching any IANA zone, star = main clock, remove; max 6; saved per browser in `localStorage["dt-clocks"]`). Time comes from `useNow("minute" | "second")` (`hooks/use-now.ts`), which is `null` on the server and during hydration: render a same-sized placeholder for that pass.
+  - `features/notifications/notification-bell.tsx`: loads `GET /api/notifications?limit=20` after hydration, every 60 s while the tab is visible, on tab focus and on `refreshNotifications()`. 18px count circle ("9+" above nine); slow ping + one bell swing while something new hasn't been seen (`localStorage["dt-notifications-seen"]`); clicking an item marks it read and opens it (doctor → `/doctors/:id`, patient → `/patients?search=<name>`); "Mark all as read".
+- Sizing: content is full width (no max-width cap). From `lg` the content column is `h-dvh` with the top bar fixed in it and `<main>` as the only scroll container; below `lg` the window scrolls (`scrollbar-gutter: stable` so dialogs locking the scroll don't shift the page).
 - Preferences: `applyTheme` / `applySidebarCollapsed` (`lib/preferences.ts`) write localStorage + the `<html>` attribute; use `dark:` / `sidebar-collapsed:` variants for anything visual.
 
-## Component tree _(planned)_
-Filled in as feature modules are completed (milestone 4 pages).
+## Component tree
+### Doctors (built in 4.1)
+```
+app/(app)/doctors/page.tsx          server: parseDoctorParams → getDoctors + getHospitals → <DoctorsView>
+app/(app)/doctors/loading.tsx       <DoctorsListSkeleton> (the real DataTable in loading mode)
+app/(app)/doctors/[id]/page.tsx     server: getDoctor + getDoctorPatients + getDoctorPatientCounts + getHospitals (parallel)
+app/(app)/doctors/[id]/loading.tsx  <DoctorProfileSkeleton> + <DoctorPatientsSkeleton>
+app/(app)/doctors/[id]/not-found.tsx
+features/doctors/
+  types.ts · params.ts (parse / query / href / filter count) · schema.ts (form) · server.ts (reads) · client.ts (writes)
+  components/doctors-view.tsx         toolbar · filter tokens · DataTable (DOCTOR_COLUMNS) · Pagination · dialogs
+  components/doctor-filters-dialog.tsx · doctor-form-dialog.tsx · delete-doctor-dialog.tsx
+  components/doctor-profile.tsx       profile card + stat tiles (+ skeleton)
+  components/doctor-patients-view.tsx the doctor's patients (PATIENT_COLUMNS, + skeleton)
+features/patients/
+  types.ts · params.ts · schema.ts · client.ts
+  components/patient-form-dialog.tsx  (doctor preset; 4.2 adds a doctor picker) · delete-patient-dialog.tsx
+lib/list-params.ts                  readString / readEnum / readInt / readDate / readPaging / orderedRange
+components/layout/breadcrumb-tail.tsx   detail pages add their name to the top bar breadcrumb
+```
+- **List page recipe:** parse params on the server → fetch in parallel → client view gets data + params → `navigate(patch)` = `router.replace(href(params, patch), { scroll: false })` in `startTransition`; dim the table with `isPending`; redirect a page past the end to the last page.
+- **Never key a search box by its own text** (it remounts and loses focus as results land); key it by a counter bumped by outside "clear" actions.
+- **Screen-fitting tables:** the page root is `flex flex-col lg:min-h-0 lg:flex-1`, the table wrapper `flex min-h-0 flex-col`, and `<DataTable fill>`.

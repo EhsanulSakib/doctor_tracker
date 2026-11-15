@@ -1,11 +1,11 @@
 # Module 4.1 — Doctors UI: Tasks
 
-- [ ] [frontend] `features/doctors`: types, API helpers (server list/detail/hospitals, client create/update/delete), Zod form schema mirroring the backend rules
-- [ ] [frontend] `hooks/use-query-params.ts` (read/patch URL params, reset page on filter change) + `use-debounce.ts`
-- [ ] [frontend] `/doctors` page: header with total count + "New doctor"; toolbar (search, specialization, hospital, status, joined range, experience range, sort); filter chips; DataTable (name + email, specialization, hospital, status badge, experience, patients, joined, row actions); Pagination with page-size select
-- [ ] [frontend] `DoctorFormDialog` (create / edit): React Hook Form + Zod, server 409 email error mapped onto the field
-- [ ] [frontend] Delete doctor: ConfirmDialog; 409 `DOCTOR_HAS_PATIENTS` shown as a friendly explanation with the patient count
-- [ ] [frontend] `/doctors/[id]` page: profile header (avatar initials, specialization, hospital, contact, status, experience), mini stats, patients table with its own filters and pagination
-- [ ] [frontend] `PatientFormDialog` (shared with 4.2): add patient with the doctor preset; delete patient from the doctor page
-- [ ] [frontend] `loading.tsx` skeletons + empty states (no doctors yet / no results for filters)
-- [ ] [test] Manual browser pass (desktop + mobile width): search, every filter, pagination, create, edit, delete guard, detail page add/delete patient; `typecheck` / `lint` / `build`
+- [x] [frontend] `features/doctors`: types, URL params (`params.ts`), server reads (`server.ts`: list / detail / hospitals / patients / per-status counts), client writes (`client.ts`: create / update / delete), Zod form schema mirroring the backend rules
+- [x] [frontend] URL handling: `lib/list-params.ts` (read and validate params, drop invalid ones) + per-feature `…Href(params, patch)` builders (page resets to 1 on any other change); no `useSearchParams` (the server passes the parsed params down)
+- [x] [frontend] `/doctors` page: toolbar (search, specialization + status selects from `xl`, Filters dialog with every filter and sort, "New doctor"); removable filter tokens + "Clear all"; DataTable (doctor + email, specialization (+ hospital below 2xl), hospital (2xl), status badge, experience, patients, joined, row actions); Pagination with page-size select
+- [x] [frontend] `DoctorFormDialog` (create / edit): React Hook Form + Zod, hospital suggestions (`datalist`), API field errors mapped onto fields (409 email)
+- [x] [frontend] Delete doctor: a doctor with patients gets an explanation + "View patients" up front; otherwise ConfirmDialog; a racing 409 `DOCTOR_HAS_PATIENTS` is explained with the count
+- [x] [frontend] `/doctors/[id]` page: profile card (initials, status, specialization, hospital, phone / email links, experience, joined, edit / delete), stat tiles (patients, active, under treatment, recovered), patients table with search / status / condition / sort / pagination in the URL; breadcrumb `Doctors › Dr. …`
+- [x] [frontend] `PatientFormDialog` + `DeletePatientDialog` (shared with 4.2): add a patient with the doctor preset, edit, delete from the doctor page
+- [x] [frontend] `loading.tsx` skeletons cut to the real geometry (same DataTable in loading mode) + empty states (no doctors yet / no results) + `not-found.tsx` for unknown or malformed ids
+- [x] [test] Real-browser run (desktop + phone): search, every filter, tokens, sort, pagination, page size, create (validation + duplicate email), edit, delete guard, delete, profile stats, patient filter / add / edit / delete, not-found, layout and skeleton geometry: **32/32**; regressions layout 20/20, UI 26/26, top bar 20/20; `typecheck` / `lint` / `build` clean

@@ -12,7 +12,7 @@ type IconButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" 
 
 const variants = {
   ghost: "text-ink-muted hover:bg-paper-2 hover:text-ink",
-  secondary: "border border-line-strong bg-surface text-ink hover:bg-paper-2",
+  secondary: "border border-line bg-surface text-ink shadow-card hover:bg-paper-2",
 };
 
 const sizes = {

@@ -154,3 +154,33 @@ export const EyeOffIcon = createIcon(
   "EyeOff",
   <path d="M4 4l16 16M10.6 6A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-2.8 3.6M6.7 7.2A16.5 16.5 0 0 0 2.5 12S6 18.5 12 18.5a9 9 0 0 0 4-.9M9.9 9.9a3 3 0 0 0 4.2 4.2" />,
 );
+export const BellIcon = createIcon(
+  "Bell",
+  <path d="M6 9.5a6 6 0 1 1 12 0c0 4.5 1.8 6.2 2.5 7H3.5c.7-.8 2.5-2.5 2.5-7zM10 20a2.2 2.2 0 0 0 4 0" />,
+);
+export const ClockIcon = createIcon(
+  "Clock",
+  <>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 7.5V12l3 2" />
+  </>,
+);
+export const GlobeIcon = createIcon(
+  "Globe",
+  <>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M3.5 12h17M12 3.5c2.3 2.4 3.4 5.2 3.4 8.5s-1.1 6.1-3.4 8.5c-2.3-2.4-3.4-5.2-3.4-8.5S9.7 5.9 12 3.5z" />
+  </>,
+);
+export const StarIcon = createIcon(
+  "Star",
+  <path d="M12 3.8l2.5 5.2 5.6.7-4.1 3.9 1 5.6-5-2.7-5 2.7 1-5.6-4.1-3.9 5.6-.7z" />,
+);
+export const UserPlusIcon = createIcon(
+  "UserPlus",
+  <>
+    <circle cx="10" cy="8" r="3.5" />
+    <path d="M3.5 19.5c.6-3.2 3.2-5.2 6.5-5.2 1.3 0 2.5.3 3.5.9M18 13v6M15 16h6" />
+  </>,
+);
+export const SwapIcon = createIcon("Swap", <path d="M4 8h14M14.5 4.5L18 8l-3.5 3.5M20 16H6M9.5 12.5L6 16l3.5 3.5" />);

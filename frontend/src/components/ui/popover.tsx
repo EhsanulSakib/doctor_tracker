@@ -28,6 +28,9 @@ type PopoverProps = {
   /** Optional control from outside (e.g. reset a draft when it opens). */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Where focus goes on open: the first control (default), or the panel itself (lists whose first
+   *  control is an action you don't want pre-selected, e.g. "Mark all as read"). */
+  initialFocus?: "first" | "panel";
   className?: string;
 };
 
@@ -35,7 +38,16 @@ type PopoverProps = {
  * Non-modal floating panel (filters, date ranges). Opens next to its trigger, moves focus inside,
  * closes on Escape, outside click or tabbing out, and returns focus to the trigger.
  */
-export function Popover({ trigger, children, label, align = "start", open: openProp, onOpenChange, className }: PopoverProps) {
+export function Popover({
+  trigger,
+  children,
+  label,
+  align = "start",
+  open: openProp,
+  onOpenChange,
+  initialFocus = "first",
+  className,
+}: PopoverProps) {
   const [openState, setOpenState] = useState(false);
   const open = openProp ?? openState;
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -61,8 +73,8 @@ export function Popover({ trigger, children, label, align = "start", open: openP
   useEffect(() => {
     if (!open) return;
     const panel = panelRef.current;
-    (getFocusable(panel)[0] ?? panel)?.focus({ preventScroll: true });
-  }, [open]);
+    (initialFocus === "panel" ? panel : (getFocusable(panel)[0] ?? panel))?.focus({ preventScroll: true });
+  }, [open, initialFocus]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {

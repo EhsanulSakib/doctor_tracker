@@ -28,6 +28,8 @@ export type Column<T> = {
   className?: string;
   /** On phones: card heading, the line under it, a "label: value" field (default), or hidden. */
   mobile?: "title" | "meta" | "field" | "hidden";
+  /** Loading placeholder for this column's cells, when the real cell isn't one 20px line (avatar + two lines…). */
+  skeleton?: ReactNode;
 };
 
 type DataTableProps<T> = {
@@ -47,6 +49,11 @@ type DataTableProps<T> = {
   empty?: ReactNode;
   loading?: boolean;
   skeletonRows?: number;
+  /**
+   * Laptops and up: take the height that's left (inside a flex column) and scroll the rows inside the
+   * table, with a sticky header, instead of growing the page.
+   */
+  fill?: boolean;
 };
 
 export function DataTable<T>({
@@ -61,6 +68,7 @@ export function DataTable<T>({
   empty,
   loading = false,
   skeletonRows = 6,
+  fill = false,
 }: DataTableProps<T>) {
   // Server-rendered rows are visible immediately (no hidden-until-hydrated content); after that, a
   // new page of rows mounts a new body (key) and staggers in.
@@ -70,7 +78,7 @@ export function DataTable<T>({
 
   if (!loading && rows.length === 0) {
     return (
-      <div className="rounded-panel border border-line bg-surface">{empty ?? <EmptyState title="Nothing to show yet" />}</div>
+      <div className="rounded-panel border border-line bg-surface shadow-card">{empty ?? <EmptyState title="Nothing to show yet" />}</div>
     );
   }
 
@@ -81,18 +89,25 @@ export function DataTable<T>({
   return (
     <>
       {/* Desktop / tablet: a real table. */}
-      <div className="hidden overflow-x-auto rounded-panel border border-line bg-surface md:block">
+      <div
+        className={cn(
+          "hidden overflow-x-auto rounded-panel border border-line bg-surface shadow-card scrollbar-thin md:block",
+          fill && "lg:min-h-0 lg:overflow-auto",
+        )}
+      >
         <table className="w-full border-collapse text-sm">
           <caption className="sr-only">{caption}</caption>
           <thead>
-            <tr className="border-b border-line bg-paper-2/60">
+            <tr className="bg-paper">
               {columns.map((column) => (
                 <th
                   key={column.id}
                   scope="col"
                   aria-sort={ariaSort(column.sort, sort)}
                   className={cn(
-                    "whitespace-nowrap px-4 py-2.5 text-left text-label font-medium uppercase text-ink-muted",
+                    // The bottom rule is a shadow: a border on a sticky header row scrolls away with the rows.
+                    "whitespace-nowrap bg-paper px-4 py-3 text-left text-label font-semibold uppercase text-ink-muted shadow-[inset_0_-1px_0_var(--line)]",
+                    fill && "lg:sticky lg:top-0 lg:z-10",
                     column.align === "right" && "text-right",
                     column.className,
                   )}
@@ -105,7 +120,7 @@ export function DataTable<T>({
                 </th>
               ))}
               {rowActions && (
-                <th scope="col" className="w-px px-4 py-2.5">
+                <th scope="col" className={cn("w-px bg-paper px-4 py-2.5 shadow-[inset_0_-1px_0_var(--line)]", fill && "lg:sticky lg:top-0 lg:z-10")}>
                   <span className="sr-only">Actions</span>
                 </th>
               )}
@@ -117,11 +132,11 @@ export function DataTable<T>({
               {Array.from({ length: skeletonRows }, (_, i) => (
                 <tr key={i} className="border-b border-line last:border-0">
                   {columns.map((column) => (
-                    <td key={column.id} className="px-4 py-3.5">
-                      <Skeleton className={cn("h-3.5", column.align === "right" ? "ml-auto w-12" : "w-3/4")} />
+                    <td key={column.id} className={cn("px-4 py-3", column.className)}>
+                      {column.skeleton ?? <Skeleton className={cn("my-0.5 h-4", column.align === "right" ? "ml-auto w-12" : "w-3/4")} />}
                     </td>
                   ))}
-                  {rowActions && <td className="px-4 py-3.5" />}
+                  {rowActions && <td className="px-4 py-3" />}
                 </tr>
               ))}
             </tbody>
@@ -131,7 +146,7 @@ export function DataTable<T>({
                 <m.tr
                   key={getRowId(row)}
                   variants={listItem}
-                  className="border-b border-line transition-colors last:border-0 hover:bg-paper-2/60"
+                  className="border-b border-line transition-colors last:border-0 hover:bg-paper/80"
                 >
                   {columns.map((column) => (
                     <td key={column.id} className={cn("px-4 py-3 align-middle", column.align === "right" && "whitespace-nowrap text-right tabular-nums", column.className)}>
@@ -151,10 +166,11 @@ export function DataTable<T>({
       </div>
 
       {/* Phones: one card per row (a wide table would scroll sideways). */}
-      <ul className="grid gap-2 md:hidden" aria-label={caption}>
+      {/* grid-cols-1 = minmax(0, 1fr): a long unbroken value (email) truncates instead of widening the card past the screen. */}
+      <ul className="grid grid-cols-1 gap-2 md:hidden" aria-label={caption}>
         {loading
           ? Array.from({ length: Math.min(skeletonRows, 4) }, (_, i) => (
-              <li key={i} className="grid gap-3 rounded-panel border border-line bg-surface p-4">
+              <li key={i} className="grid gap-3 rounded-panel border border-line bg-surface p-4 shadow-card">
                 <Skeleton className="h-4 w-1/2" />
                 <Skeleton className="h-3 w-3/4" />
                 <Skeleton className="h-3 w-2/3" />
@@ -166,7 +182,7 @@ export function DataTable<T>({
                 variants={listItem}
                 initial={initial}
                 animate="visible"
-                className="rounded-panel border border-line bg-surface p-4"
+                className="rounded-panel border border-line bg-surface p-4 shadow-card"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">

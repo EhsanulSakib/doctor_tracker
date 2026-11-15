@@ -11,6 +11,8 @@ type UiState = {
   mobileNavOpen: boolean;
   theme: Theme;
   dialog: DialogDescriptor | null;
+  /** Last breadcrumb item set by a detail page (e.g. the doctor's name); null on section pages. */
+  breadcrumbTail: string | null;
 };
 
 const initialState: UiState = {
@@ -18,6 +20,7 @@ const initialState: UiState = {
   mobileNavOpen: false,
   theme: "light",
   dialog: null,
+  breadcrumbTail: null,
 };
 
 export const uiSlice = createSlice({
@@ -42,14 +45,18 @@ export const uiSlice = createSlice({
     dialogClosed(state) {
       state.dialog = null;
     },
+    breadcrumbTailSet(state, action: PayloadAction<string | null>) {
+      state.breadcrumbTail = action.payload;
+    },
   },
   selectors: {
     selectSidebarCollapsed: (state) => state.sidebarCollapsed,
     selectMobileNavOpen: (state) => state.mobileNavOpen,
     selectTheme: (state) => state.theme,
     selectDialog: (state) => state.dialog,
+    selectBreadcrumbTail: (state) => state.breadcrumbTail,
   },
 });
 
-export const { sidebarToggled, sidebarCollapsedSet, mobileNavSet, themeSet, dialogOpened, dialogClosed } = uiSlice.actions;
-export const { selectSidebarCollapsed, selectMobileNavOpen, selectTheme, selectDialog } = uiSlice.selectors;
+export const { sidebarToggled, sidebarCollapsedSet, mobileNavSet, themeSet, dialogOpened, dialogClosed, breadcrumbTailSet } = uiSlice.actions;
+export const { selectSidebarCollapsed, selectMobileNavOpen, selectTheme, selectDialog, selectBreadcrumbTail } = uiSlice.selectors;

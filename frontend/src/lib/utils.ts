@@ -8,12 +8,12 @@ const twMerge = extendTailwindMerge({
     theme: {
       color: [
         "paper", "paper-2", "surface", "ink", "ink-muted", "ink-subtle", "line", "line-strong",
-        "accent", "accent-hover", "accent-soft", "accent-ink", "danger", "danger-hover", "danger-soft",
+        "accent", "accent-hover", "accent-soft", "accent-ink", "accent-fg", "accent-2", "danger", "danger-hover", "danger-soft",
         "danger-ink", "warning", "warning-soft", "success", "success-soft", "info", "info-soft", "overlay",
       ],
       text: ["label", "title"],
       radius: ["control", "panel"],
-      shadow: ["overlay"],
+      shadow: ["card", "overlay"],
       ease: ["clinical"],
     },
   },

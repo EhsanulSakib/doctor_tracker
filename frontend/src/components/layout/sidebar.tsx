@@ -35,12 +35,12 @@ export function Sidebar() {
     >
       <Link href="/dashboard" className="flex h-14 shrink-0 items-center gap-2.5 border-b border-line px-4 focus-ring">
         <BrandMark />
-        <span className="hidden truncate text-[15px] font-semibold tracking-tight lg:inline lg:sidebar-collapsed:hidden">Doctor Tracker</span>
+        <span className="hidden truncate text-[15px] font-semibold tracking-tight text-ink lg:inline lg:sidebar-collapsed:hidden">Doctor Tracker</span>
         <span className="sr-only lg:hidden">Doctor Tracker home</span>
       </Link>
 
-      <nav aria-label="Main" className="flex-1 overflow-y-auto px-3 py-4">
-        <p className="mb-2 hidden px-2.5 text-label font-medium uppercase text-ink-subtle lg:block lg:sidebar-collapsed:hidden">Workspace</p>
+      <nav aria-label="Main" className="flex-1 overflow-y-auto px-3 py-5">
+        <p className="mb-2 hidden px-3 text-label font-semibold uppercase text-ink-muted lg:block lg:sidebar-collapsed:hidden">Menu</p>
         <ul className="grid gap-1">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const active = isActivePath(pathname, href);
@@ -51,9 +51,9 @@ export function Sidebar() {
                   title={label}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative flex h-10 items-center gap-3 rounded-control px-2.5 text-sm font-medium transition-colors focus-ring",
+                    "relative flex h-10 items-center gap-3 rounded-control px-3 text-sm font-medium transition-colors focus-ring",
                     "justify-center lg:justify-start lg:sidebar-collapsed:justify-center",
-                    active ? "text-accent" : "text-ink-muted hover:bg-paper-2 hover:text-ink",
+                    active ? "text-accent-fg" : "text-ink-muted hover:bg-paper-2 hover:text-ink",
                   )}
                 >
                   {/* Slides between items on navigation (shared layout animation). */}
@@ -76,7 +76,7 @@ export function Sidebar() {
           onClick={toggle}
           aria-controls="sidebar"
           aria-expanded={!collapsed}
-          className="flex h-9 w-full items-center gap-3 rounded-control px-2.5 text-sm text-ink-muted transition-colors hover:bg-paper-2 hover:text-ink focus-ring lg:sidebar-collapsed:justify-center"
+          className="flex h-9 w-full items-center gap-3 rounded-control px-3 text-sm text-ink-muted transition-colors hover:bg-paper-2 hover:text-ink focus-ring lg:sidebar-collapsed:justify-center"
         >
           <PanelLeftIcon size={18} className="shrink-0" />
           <span className="sidebar-collapsed:sr-only">{collapsed ? "Expand sidebar" : "Collapse sidebar"}</span>

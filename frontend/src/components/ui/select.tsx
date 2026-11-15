@@ -252,7 +252,7 @@ export function Select<V extends string>({
                       <span className="block truncate">{item.label}</span>
                       {item.description && <span className="block truncate text-xs font-normal text-ink-muted">{item.description}</span>}
                     </span>
-                    {isSelected && <CheckIcon className="shrink-0 text-accent" />}
+                    {isSelected && <CheckIcon className="shrink-0 text-accent-fg" />}
                   </li>
                 );
               })}

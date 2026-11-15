@@ -6,6 +6,7 @@ import { endOfDay, startOfDay } from '../../lib/schemas.js';
 import { searchKeyFilter } from '../../lib/search-key.js';
 import { clearDashboardCache } from '../dashboard/dashboard.service.js';
 import { DoctorModel } from '../doctors/doctor.model.js';
+import { notificationCopy, notify, removeNotificationsFor, type NotificationInput } from '../notifications/notifications.service.js';
 import { PatientModel } from './patient.model.js';
 import type {
   CreateDoctorPatientInput,
@@ -138,6 +139,7 @@ function findPage(q: ListPatientsQuery) {
 
 async function insertPatient(input: CreateDoctorPatientInput, doctor: DoctorSummary): Promise<PatientDto> {
   const patient = await PatientModel.create({ ...input, doctorId: doctor.id });
+  await notify(notificationCopy.patientAdmitted({ id: patient._id, name: patient.name }, doctor));
   clearDashboardCache();
   return toPatientDto(patient.toObject<PatientRecord>(), doctor);
 }
@@ -195,6 +197,7 @@ export async function updatePatient(id: string, input: UpdatePatientInput): Prom
 
   if (!patient) throw HttpError.notFound('Patient');
   if (input.doctorId && !newDoctor) throw doctorNotFound();
+  const previous = { status: patient.status, doctorId: patient.doctorId.toString() };
 
   // Load + save (instead of findOneAndUpdate) so validation and the searchKey hook run.
   // A cleared optional field arrives as `undefined`, which save() turns into $unset.
@@ -203,6 +206,18 @@ export async function updatePatient(id: string, input: UpdatePatientInput): Prom
   clearDashboardCache();
 
   const doctor = newDoctor ?? (await findDoctorSummary(patient.doctorId));
+
+  // Notifications for what actually changed (both when a patient recovers and moves in one edit).
+  const events: NotificationInput[] = [];
+  const subject = { id: patient._id, name: patient.name };
+  if (patient.status === 'recovered' && previous.status !== 'recovered') {
+    events.push(notificationCopy.patientRecovered(subject, doctor ?? null));
+  }
+  if (newDoctor && newDoctor.id !== previous.doctorId) {
+    events.push(notificationCopy.patientReassigned(subject, newDoctor, (await findDoctorSummary(previous.doctorId)) ?? null));
+  }
+  await notify(...events);
+
   return toPatientDto(patient.toObject<PatientRecord>(), doctor);
 }
 
@@ -210,4 +225,5 @@ export async function deletePatient(id: string): Promise<void> {
   const { deletedCount } = await PatientModel.deleteOne({ _id: id });
   if (deletedCount === 0) throw HttpError.notFound('Patient');
   clearDashboardCache();
+  await removeNotificationsFor(id);
 }

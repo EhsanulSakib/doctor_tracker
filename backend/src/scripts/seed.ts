@@ -6,6 +6,8 @@
  * numbers, monsoon and winter admission peaks. The faker seed is fixed, so every run creates the
  * same people; dates are relative to today in APP_TIMEZONE (Asia/Dhaka), so the dashboard's
  * 30d / 90d / 12m views always have data.
+ * Notifications (the topbar bell) are rebuilt from those people: about 30 over the last 7 days,
+ * the newest 12 unread.
  * Refresh tokens (sessions) are left alone. Refuses to run with NODE_ENV=production unless --force.
  *
  * To copy the result to the shared database afterwards: npm run db:sync -- --yes
@@ -27,11 +29,16 @@ import { todayAsDateOnly } from '../lib/dates.js';
 import { seedAdmin } from '../modules/auth/auth.seed.js';
 import { UserModel } from '../modules/auth/user.model.js';
 import { DoctorModel } from '../modules/doctors/doctor.model.js';
+import { NotificationModel } from '../modules/notifications/notification.model.js';
+import { notificationCopy, type NotificationInput } from '../modules/notifications/notifications.service.js';
 import { PatientModel } from '../modules/patients/patient.model.js';
 
 const SEED = 20261114;
 const DOCTOR_COUNT = 15; // at least one per specialization (10)
 const PATIENT_COUNT = 200;
+const NOTIFICATION_COUNT = 30;
+const UNREAD_NOTIFICATIONS = 12; // more than 9, so the bell shows "9+"
+const MAX_RECOVERIES = 8;
 
 /** Fictional hospitals across Bangladesh (most in Dhaka). Emails use reserved example.org domains. */
 const HOSPITALS = [
@@ -237,6 +244,119 @@ function buildPatients(doctors: Array<{ _id: mongoose.Types.ObjectId; specializa
   });
 }
 
+// ─── Notifications ────────────────────────────────────────────────────────────────────────
+
+type SeedDoctor = {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  specialization: Specialization;
+  hospital: string;
+  status: DoctorStatus;
+};
+type SeedPatient = { _id: mongoose.Types.ObjectId; name: string; status: PatientStatus; admissionDate: Date; doctorId: mongoose.Types.ObjectId };
+
+/** APP_TIMEZONE's UTC offset in minutes at a given moment (Asia/Dhaka: +360 all year). */
+function zoneOffsetMinutes(at: Date): number {
+  const label =
+    new Intl.DateTimeFormat('en-US', { timeZone: env.APP_TIMEZONE, timeZoneName: 'longOffset' })
+      .formatToParts(at)
+      .find((part) => part.type === 'timeZoneName')?.value ?? 'GMT';
+  const match = /GMT([+-])(\d{2}):?(\d{2})?/.exec(label);
+  return match ? (match[1] === '-' ? -1 : 1) * (Number(match[2]) * 60 + Number(match[3] ?? 0)) : 0;
+}
+
+// Clinic hours, in local minutes after midnight.
+const OPENING = 10 * 60;
+const CLOSING = 18 * 60 + 59;
+
+/**
+ * A moment between `from` and `to` (local time) on a calendar date (UTC midnight), never after
+ * `now`: today only up to the current minute.
+ */
+function clinicHoursOn(date: Date, now: Date, from = OPENING, to = CLOSING): Date {
+  const localMidnight = date.getTime() - zoneOffsetMinutes(date) * 60_000;
+  const start = localMidnight + from * 60_000;
+  const end = Math.min(localMidnight + to * 60_000, now.getTime() - 60_000);
+  // Today, before opening time: a moment shortly before now instead.
+  if (end <= start) return new Date(now.getTime() - faker.number.int({ min: 5, max: 60 }) * 60_000);
+  return new Date(faker.number.int({ min: start, max: end }));
+}
+
+/** One of the last 7 calendar days (today included), not before `from`. */
+function recentDay(today: Date, from?: Date): Date {
+  const maxBack = from ? Math.min(6, Math.max(0, Math.floor((today.getTime() - from.getTime()) / DAY_MS))) : 6;
+  return new Date(today.getTime() - faker.number.int({ min: 0, max: maxBack }) * DAY_MS);
+}
+
+function buildNotifications(doctors: SeedDoctor[], patients: SeedPatient[], today: Date, now: Date) {
+  const doctorById = new Map(doctors.map((d) => [d._id.toString(), d]));
+  const doctorOf = (patient: SeedPatient) => doctorById.get(patient.doctorId.toString())!;
+  const ref = (patient: SeedPatient) => ({ id: patient._id, name: patient.name });
+  const newestAdmissionFirst = (a: SeedPatient, b: SeedPatient) => b.admissionDate.getTime() - a.admissionDate.getTime();
+  const events: Array<NotificationInput & { createdAt: Date }> = [];
+
+  // This week's admissions, on the day they were admitted.
+  const weekStart = new Date(today.getTime() - 6 * DAY_MS);
+  for (const patient of patients.filter((p) => p.admissionDate >= weekStart).sort(newestAdmissionFirst).slice(0, 10)) {
+    events.push({ ...notificationCopy.patientAdmitted(ref(patient), doctorOf(patient)), createdAt: clinicHoursOn(patient.admissionDate, now) });
+  }
+
+  // Every doctor who is on leave or inactive, with their real number of patients still under care.
+  for (const doctor of doctors) {
+    if (doctor.status === 'active') continue;
+    const stillAssigned = patients.filter((p) => p.doctorId.equals(doctor._id) && p.status !== 'recovered').length;
+    events.push({
+      ...notificationCopy.doctorUnavailable({ id: doctor._id, name: doctor.name, status: doctor.status }, stillAssigned),
+      createdAt: clinicHoursOn(recentDay(today), now),
+    });
+  }
+
+  // Doctors added to the tracker at the start of the week, before opening time, so every later
+  // event that mentions them comes after they were added.
+  const added = faker.helpers.arrayElements(doctors.filter((d) => d.status === 'active'), 3);
+  for (const doctor of added) {
+    events.push({
+      ...notificationCopy.doctorAdded({ id: doctor._id, name: doctor.name, specialization: doctor.specialization, hospital: doctor.hospital }),
+      createdAt: clinicHoursOn(weekStart, now, 9 * 60, 9 * 60 + 45),
+    });
+  }
+
+  // Patients still under care who moved to an active doctor, from a colleague in the same field when
+  // there is one (never from a doctor who was only just added).
+  const movable = patients.filter((p) => p.status !== 'recovered' && doctorOf(p).status === 'active');
+  for (const patient of faker.helpers.arrayElements(movable, 7)) {
+    const current = doctorOf(patient);
+    const others = doctors.filter((d) => !d._id.equals(current._id) && !added.includes(d));
+    const sameField = others.filter((d) => d.specialization === current.specialization);
+    const previous = faker.helpers.arrayElement(sameField.length ? sameField : others);
+    events.push({
+      ...notificationCopy.patientReassigned(ref(patient), current, previous),
+      createdAt: clinicHoursOn(recentDay(today, patient.admissionDate), now),
+    });
+  }
+
+  // Recoveries fill the rest (capped, so the newest items stay a mix of every type): the recovered
+  // patients admitted most recently.
+  const recovered = patients.filter((p) => p.status === 'recovered').sort(newestAdmissionFirst);
+  for (const patient of recovered.slice(0, Math.min(MAX_RECOVERIES, Math.max(0, NOTIFICATION_COUNT - events.length)))) {
+    events.push({
+      ...notificationCopy.patientRecovered(ref(patient), doctorOf(patient)),
+      createdAt: clinicHoursOn(recentDay(today, patient.admissionDate), now),
+    });
+  }
+
+  // Newest first: the newest ones are unread, older ones were read a little after they arrived.
+  return events
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .map((event, i) => ({
+      ...event,
+      readAt:
+        i < UNREAD_NOTIFICATIONS
+          ? null
+          : new Date(Math.min(now.getTime(), event.createdAt.getTime() + faker.number.int({ min: 10, max: 240 }) * 60_000)),
+    }));
+}
+
 // ─── Run ─────────────────────────────────────────────────────────────────────────────────
 
 if (isProd && !process.argv.includes('--force')) {
@@ -255,13 +375,15 @@ try {
   faker.seed(SEED);
   const today = todayAsDateOnly(); // today's date in APP_TIMEZONE
 
-  await Promise.all([UserModel.syncIndexes(), DoctorModel.syncIndexes(), PatientModel.syncIndexes()]);
+  await Promise.all([UserModel.syncIndexes(), DoctorModel.syncIndexes(), PatientModel.syncIndexes(), NotificationModel.syncIndexes()]);
   const admin = await seedAdmin({ name: env.ADMIN_NAME, email: env.ADMIN_EMAIL, password: env.ADMIN_PASSWORD });
 
-  await Promise.all([PatientModel.deleteMany({}), DoctorModel.deleteMany({})]);
+  await Promise.all([PatientModel.deleteMany({}), DoctorModel.deleteMany({}), NotificationModel.deleteMany({})]);
   // insertMany runs schema validation and the searchKey hook for every document.
   const doctors = await DoctorModel.insertMany(buildDoctors(today));
   const patients = await PatientModel.insertMany(buildPatients(doctors, today));
+  // createdAt is set explicitly (Mongoose only fills it in when it is missing).
+  const notifications = await NotificationModel.insertMany(buildNotifications(doctors, patients, today, new Date()));
 
   const admissions = patients.map((p) => p.admissionDate.getTime());
   const last30 = admissions.filter((t) => t > today.getTime() - 30 * DAY_MS).length;
@@ -269,6 +391,7 @@ try {
   console.log(`Seeded ${target} (today in ${env.APP_TIMEZONE}: ${today.toISOString().slice(0, 10)})`);
   console.log(`  admin     ${admin.email}`);
   console.log(`  doctors   ${doctors.length} (${doctors.filter((d) => d.status === 'active').length} active)`);
+  console.log(`  notifications ${notifications.length} (${notifications.filter((n) => !n.readAt).length} unread), ${notifications.at(-1)?.createdAt.toISOString()} → ${notifications[0]?.createdAt.toISOString()}`);
   console.log(`  patients  ${patients.length}, admitted ${new Date(Math.min(...admissions)).toISOString().slice(0, 10)} → ${new Date(Math.max(...admissions)).toISOString().slice(0, 10)} (${last30} in the last 30 days)`);
 } finally {
   await disconnectDb();
