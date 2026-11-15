@@ -21,5 +21,5 @@
     "outDir": "dist",
     "sourceMap": true
   },
-  "include": ["src", "tests", "vitest.config.ts"]
+  "include": ["index.ts", "src", "tests", "vitest.config.ts"]
 }

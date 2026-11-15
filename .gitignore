@@ -25,3 +25,7 @@ Thumbs.db
 
 # platforms
 .vercel
+
+# planning notes, design notes and the spec stay local; only the README screenshots are published
+docs/*
+!docs/screenshots/

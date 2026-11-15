@@ -14,5 +14,3 @@ npm run dev                  # http://localhost:3000 (start the backend first)
 | `npm run build` / `npm start` | production build / serve |
 | `npm run typecheck` | generate route types, then `tsc --noEmit` |
 | `npm run lint` | ESLint (Next core-web-vitals + TypeScript rules) |
-
-Conventions and API contracts: [`docs/doctor-tracker/doctor-tracker_fe_guide.md`](../docs/doctor-tracker/doctor-tracker_fe_guide.md).

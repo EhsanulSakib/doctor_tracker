@@ -26,7 +26,6 @@ A secure admin portal for managing doctors and the patients assigned to them, wi
 10. [Testing](#testing)
 11. [Scalability considerations](#scalability-considerations)
 12. [Deployment notes](#deployment-notes)
-13. [Project documentation](#project-documentation)
 
 ---
 
@@ -404,8 +403,6 @@ doctor-tracker/
 │   │   └── store/
 │   └── .env.example
 ├── docs/
-│   ├── design-system.md         tokens (primitive → semantic → component), scales, component states
-│   ├── doctor-tracker/          plan, feature log, FE guide, QA guide, module walkthroughs
 │   └── screenshots/             README images
 └── docker-compose.yml           local MongoDB 8
 ```
@@ -450,7 +447,7 @@ doctor-tracker/
 
 ### Other decisions, briefly
 
-- **No component library.** The primitives (Select, Dialog/bottom sheet, Popover, DataTable with phone cards, Pagination, async combobox, calendar with date and range pickers, suggestion field) are hand-built on WAI-ARIA patterns, styled with Tailwind tokens, and animated with `motion`. The tokens come in three layers (primitive → semantic → component). Tailwind's own palette is switched off, so components can only use them. See [docs/design-system.md](docs/design-system.md).
+- **No component library.** The primitives (Select, Dialog/bottom sheet, Popover, DataTable with phone cards, Pagination, async combobox, calendar with date and range pickers, suggestion field) are hand-built on WAI-ARIA patterns, styled with Tailwind tokens, and animated with `motion`. The tokens come in three layers (primitive → semantic → component). Tailwind's own palette is switched off, so components can only use them.
 - **Charts are hand-built (SVG + HTML) instead of Recharts.** The charts are simple (an area chart, a donut, columns and bars). Building them gives exact styling in both themes, server rendering and real-component tooltips with no chart bundle. Colours were checked with a palette validator for lightness, colour-blind separation and 3:1 contrast.
 - **Exports are built in the browser.** CSV is generated directly (with a byte-order mark so Excel reads UTF-8). PDF uses jsPDF, loaded only when someone exports, so it never weighs on page loads. Exports of "all" or "filtered" rows fetch every page from the same list endpoints the tables use.
 - **Read-only demo as a role, not a separate app.** The demo account is a normal user with the `demo` role. Authorization stays in one place on the server: reads are allowed and writes are rejected by middleware. The UI simply shows the API's answer as a toast.
@@ -576,7 +573,7 @@ All endpoints are under `/api`, return JSON, and (except health and sign-in) req
 | GET | `/notifications?limit=` | latest notifications + `meta.unreadCount` |
 | PATCH · POST | `/notifications/:id/read` · `/notifications/read-all` | mark one · mark all as read |
 
-Validation errors return `400 { error: { code: "VALIDATION_ERROR", details: [{ path, message }] } }`, one message per field, which the forms show under the matching input. The full contract, with every error code, is in [`docs/doctor-tracker/feature.md`](docs/doctor-tracker/feature.md).
+Validation errors return `400 { error: { code: "VALIDATION_ERROR", details: [{ path, message }] } }`, one message per field, which the forms show under the matching input.
 
 ---
 
@@ -587,7 +584,7 @@ Validation errors return `400 { error: { code: "VALIDATION_ERROR", details: [{ p
 | API | `cd backend && npm test`: Vitest + Supertest against an in-memory MongoDB. Covers auth (rotation, reuse, expiry), the read-only demo role, profile and password changes, upload signatures and photo URLs, validation, every endpoint, filters (including the chamber schedule), pagination, deleting a doctor (patients left unassigned), attendance, dashboard maths and notifications | **123 tests, all passing** |
 | Queries | `npm run db:explain`: the plan of every list, search, filter, dashboard and notification query | **25/25 use an index** |
 | Frontend | `npm run typecheck`, `npm run lint`, `npm run build` | clean |
-| End to end | real-browser runs against the production build (headless Chrome over the DevTools protocol), plus manual scenarios in the [QA guide](docs/doctor-tracker/doctor-tracker_qa_guide.md) | results recorded per module in the QA guide |
+| End to end | real-browser runs against the production build (headless Chrome over the DevTools protocol), plus manual scenarios for every module | checked module by module |
 
 The browser runs check behaviour that unit tests can't:
 - values on screen against the API response;
@@ -625,14 +622,3 @@ The project is deployment-ready; any Node host works. A typical setup is the fro
 - Create the admin on the production database with `npm run seed:admin`. Demo data can be loaded with `npm run seed -- --force`; the flag is required in production because the seed replaces doctors and patients.
 - In Atlas, allow the backend host's outbound IPs (or `0.0.0.0/0` for a demo).
 - Free Render instances sleep when idle, so the first request after a pause can take about 30 seconds.
-
----
-
-## Project documentation
-
-The `docs/doctor-tracker/` folder records how the project was planned and built:
-- [`feature.md`](docs/doctor-tracker/feature.md): decisions, the completed-module log and the full API contract.
-- [`doctor-tracker_fe_guide.md`](docs/doctor-tracker/doctor-tracker_fe_guide.md): frontend rules, design tokens, primitives and the component tree.
-- [`doctor-tracker_qa_guide.md`](docs/doctor-tracker/doctor-tracker_qa_guide.md): manual test scenarios and recorded results for every module.
-- `milestone-*/module-*/`: the plan, tasks, progress and a learning walkthrough for each module.
-- The original specification is in [`docs/requirements/`](docs/requirements/).
