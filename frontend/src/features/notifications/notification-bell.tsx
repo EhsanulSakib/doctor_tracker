@@ -139,22 +139,22 @@ export function NotificationBell() {
       open={open}
       onOpenChange={handleOpenChange}
       initialFocus="panel"
-      className="flex max-h-(--panel-max-height) w-[380px] flex-col p-0"
+      className="flex max-h-(--panel-max-height) w-95 flex-col p-0"
       trigger={(props) => (
         <button
           {...props}
           type="button"
           aria-label={feed.unread ? `Notifications, ${feed.unread} unread` : "Notifications"}
-          className="relative inline-flex size-9 shrink-0 items-center justify-center rounded-control text-ink-muted transition-colors hover:bg-paper-2 hover:text-ink focus-ring pointer-coarse:size-11"
+          className="relative inline-flex size-9 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-paper-2 hover:text-ink focus-ring pointer-coarse:size-11"
         >
           {/* Re-keyed per new arrival, so the swing plays once for each. */}
           <span key={hasNew ? newestUnread.id : "idle"} className={cn("inline-flex origin-top", hasNew && "motion-safe:animate-bell-ring")}>
             <BellIcon size={19} />
           </span>
           {feed.unread > 0 && (
-            <span aria-hidden className="absolute top-0.5 right-0.5 flex size-[18px] pointer-coarse:top-1.5 pointer-coarse:right-1.5">
+            <span aria-hidden className="absolute top-0.5 right-0.5 flex size-4.5 pointer-coarse:top-1.5 pointer-coarse:right-1.5">
               {hasNew && <span className="absolute inset-0 rounded-full bg-danger opacity-60 motion-safe:animate-ping-slow" />}
-              <span className="relative flex size-[18px] items-center justify-center rounded-full bg-danger text-[10px] leading-none font-bold tabular-nums text-danger-ink ring-2 ring-surface">
+              <span className="relative flex size-4.5 items-center justify-center rounded-full bg-danger text-micro leading-none font-bold tabular-nums text-danger-ink ring-2 ring-surface">
                 {unreadLabel}
               </span>
             </span>
@@ -215,7 +215,7 @@ function NotificationList({ feed, onRetry, onOpenItem }: { feed: Feed; onRetry: 
     if (feed.status === "error") {
       return (
         <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-          <p className="text-[13px] text-ink-muted">Couldn&apos;t load notifications</p>
+          <p className="text-ui text-ink-muted">Couldn&apos;t load notifications</p>
           <Button variant="secondary" size="sm" onClick={onRetry}>
             Try again
           </Button>
@@ -227,7 +227,7 @@ function NotificationList({ feed, onRetry, onOpenItem }: { feed: Feed; onRetry: 
         <span className="flex size-10 items-center justify-center rounded-full bg-paper-2 text-ink-muted">
           <InboxIcon size={18} />
         </span>
-        <p className="text-[13px] font-medium text-ink">No notifications</p>
+        <p className="text-ui font-medium text-ink">No notifications</p>
       </div>
     );
   }
@@ -251,9 +251,9 @@ function NotificationList({ feed, onRetry, onOpenItem }: { feed: Feed; onRetry: 
                 <Icon size={16} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className={cn("block text-[13px] leading-[18px] text-ink", item.read ? "font-medium" : "font-semibold")}>{item.title}</span>
+                <span className={cn("block text-ui leading-4.5 text-ink", item.read ? "font-medium" : "font-semibold")}>{item.title}</span>
                 <span className="mt-0.5 block text-xs leading-4 text-ink-muted">{item.message}</span>
-                <span className="mt-1 block text-[11px] leading-4 text-ink-muted">{now ? timeAgo(item.createdAt, now) : " "}</span>
+                <span className="mt-1 block text-caption leading-4 text-ink-muted">{now ? timeAgo(item.createdAt, now) : " "}</span>
               </span>
               {!item.read && (
                 <>

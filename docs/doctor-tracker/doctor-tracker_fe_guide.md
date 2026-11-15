@@ -11,6 +11,9 @@ Next.js 16.4 App Router (Cache Components, Partial Prefetching, React Compiler) 
 - **Colours only through tokens** (`bg-surface`, `text-ink-muted`, `border-line`, `bg-accent`…), never hex values or Tailwind's palette. Merge classes with `cn()`.
 - **No window scrollbar from `lg` (1024px) up:** the shell is exactly one viewport tall (`lg:h-dvh`) and only `<main>` scrolls (`scrollbar-thin`). Design pages to fit the screen: long lists scroll inside their own region (table body), not the page. Phones and tablets scroll the window as usual. The login page follows the same rule (only the form side may scroll on a very short screen).
 - **Skeletons have the same box as the real content:** same heights, margins and fixed widths, so nothing moves when data arrives (measured CLS 0). Reuse `EmptyCardSkeleton` (`components/layout/page-skeleton.tsx`), `DataTable loading` (rows are 44px like real rows) and `UserMenuSkeleton` (shares `TRIGGER_BOX` with the real account button). A page with a different layout gets its own `loading.tsx` built from its real components' measurements.
+- **Touch targets ≥ 40px on touch screens:** icon buttons already are (`pointer-coarse:`). For a text link that must stay small, enlarge its tap area with a stretched `after:absolute after:-inset-y-2.5 after:inset-x-0` on a non-positioned link inside a `relative` wrapper. The wrapper must not clip vertically: card values use `overflow-x-clip text-ellipsis`, not `truncate`. Keep neighbouring tap areas apart (e.g. `pointer-coarse:gap-y-5`).
+- **Contrast is measured, not eyeballed:** body text ≥ 4.5:1 in both themes. `ink-subtle` is for placeholders and icons only; text printed on a coloured fill must pass too (the status fills were darkened for this).
+- **No native pickers:** never `type="date"` or `<datalist>` (they look different in every browser and ignore the theme). Use `DatePicker` / `DateRangeField` / `SuggestInput`.
 - **No visible page titles:** the top bar breadcrumb (`Doctor Tracker › Doctors`; the page name on phones) is the visible title. Still give every page `<PageHeader title="…" actions={…} />`: it renders the page's single `<h1>` for screen readers only (`sr-only`) and, if there are actions, a right-aligned row for them. Skeletons therefore start with the first block of the page, not a title row.
 - **After a create / update / delete, call `refreshNotifications()`** (`features/notifications/types.ts`): the bell reloads at once instead of at its next one-minute poll.
 - **Overlays** go through `<Portal>` (dialog z-50 · popover/listbox z-60 · toasts z-70). Modals make `#app-root` inert.
@@ -109,21 +112,41 @@ Next.js 16.4 App Router (Cache Components, Partial Prefetching, React Compiler) 
 - Store created per request (`StoreProvider`); typed `useAppDispatch` / `useAppSelector` from `@/store/hooks`.
 - Filter **drafts** live in local component state; **applied** filters live in the URL. Server data is never copied into Redux.
 
-## Design system — slate + indigo / violet (built in 3.1, redesigned 2026-11-15)
-- Tokens in `globals.css` (full table in module 3.1 `context.md`): `paper` / `paper-2` / `surface`, `ink` / `ink-muted` / `ink-subtle`, `line` / `line-strong`, `accent` (+ `-hover`, `-soft`, `-ink`), **`accent-fg`** (accent as text/icon — use it instead of `text-accent`), `accent-2` (violet, brand gradient), `danger` / `warning` / `success` / `info` (+ `-soft`), `overlay`. Dark theme via `data-theme="dark"` on `<html>`; `dark:` utilities follow it. All text pairs WCAG AA; `ink-subtle` is for placeholders/icons only.
-- Type: **Plus Jakarta Sans** (variable, `--font-jakarta`; replaced Inter on 2026-11-15 at the user's request) for UI, JetBrains Mono for codes/IDs, `tabular-nums` in tables/KPIs, clocks and counts; `text-title` (22px) for large headings (pages have no visible title), `text-label` (11px uppercase) for section labels; body 14px, inputs 16px on phones.
-- Chart tokens (4.3): `chart-accent` (#4f46e5 / dark #6366f1) for single-series marks; `chart-active` · `chart-treatment` · `chart-recovered` (#0284c7 · #d97706 · #059669, both themes) for patient status; `chart-ink` for text on the amber block.
-- Shape: `rounded-control` (8px), `rounded-panel` (12px); `shadow-card` on cards / tables / secondary buttons, `shadow-overlay` on dialogs, popovers, toasts. Panels use `<Card>` (`components/ui/card.tsx`). Badges are pills (`rounded-full`, soft fill + inset ring).
-- Layout: content is full width (no max-width cap) with 16px / 24px side padding; white sidebar and top bar on a slate-50 page.
-- Sizes: 36px controls with a mouse, 44px on touch (`pointer-coarse:`).
-- Motion: 150–250 ms, `ease-clinical`; row stagger on new data, dialog/popover lift, toast slide; `reducedMotion="user"`. Planned: sidebar `layoutId` indicator (3.2), number count-up (4.3).
+## Design system — slate + indigo / violet (built in 3.1, redesigned 2026-11-15, token layers 2026-11-15)
+- **Full reference: [`docs/design-system.md`](../design-system.md)**. It has the token layers, colour tables with measured contrast, the type / spacing / radius scales, motion, every component's states, and the steps for adding a token. Update it whenever a token changes.
+- Tokens in `globals.css` come in three layers:
+  - **primitives** (`--slate-500`, `--indigo-600`…; never used by components);
+  - **semantic** (`paper` / `paper-2` / `surface`, `ink` / `ink-muted` / `ink-subtle`, `line` / `line-strong`, `accent` (+ `-hover`, `-soft`, `-ink`), **`accent-fg`** (accent as text or icon, used instead of `text-accent`), `accent-2` (violet, brand gradient), `danger` / `warning` / `success` / `info` (+ `-soft`), `overlay`);
+  - **component** (`--chart-*`, `--photo-scrim` / `--on-photo` for the login photo, `--focus-ring`, `--scrollbar-thumb`, `--selection-bg`, `--table-head-rule`).
+- Dark theme: `data-theme="dark"` on `<html>` re-points the semantic layer, and `dark:` utilities follow it.
+- **Tailwind's palette is switched off** (`--color-*: initial`): `bg-red-500` or `text-white` generate no CSS. All text pairs pass WCAG AA; `ink-subtle` is for placeholders and icons only.
+- Type:
+  - **Plus Jakarta Sans** (variable, `--font-jakarta`; replaced Inter on 2026-11-15 at the user's request) for the UI. JetBrains Mono for codes and IDs. `tabular-nums` in tables, KPIs, clocks and counts.
+  - Scale next to Tailwind's `xs` / `sm` / `base`: `text-micro` 10px, `text-caption` 11px, `text-ui` 13px, `text-lead` 15px, `text-figure` 26px. These set the size only; line height comes from the context or a `leading-*` class.
+  - Also `text-label` (11px uppercase) for section labels and `text-title` (22px) for large headings (pages have no visible title). Body 14px; inputs 16px on phones.
+  - No `text-[13px]`-style arbitrary sizes.
+- Chart tokens (4.3, darkened in the polish pass): `chart-accent` (indigo-600, dark indigo-500) for single-series marks. `chart-active` · `chart-treatment` · `chart-recovered` (sky-700 · amber-600 · emerald-700, both themes) for patient status. `chart-ink` for text on the amber block.
+- Shape and elevation:
+  - Radii: `rounded-mark` (4px: chart marks, swatches), `rounded-tag` (6px: role tag, small square buttons, range tabs), `rounded-control` (8px), `rounded-panel` (12px), `rounded-full` (icon buttons, avatars, badges).
+  - Shadows: `shadow-card` on cards, tables and secondary buttons; `shadow-overlay` on dialogs, popovers and toasts; `shadow-table-head` for the sticky header rule.
+  - Panels use `<Card>` (`components/ui/card.tsx`). Badges are rounded (`rounded-full`, soft fill + inset ring).
+- Layout: content is full width (no max-width cap) with 16px / 24px side padding; white sidebar and top bar on a slate-50 page. Layout tokens: `w-sidebar` / `pl-sidebar` (240px), `w-sidebar-rail` / `pl-sidebar-rail` (64px), `h-topbar` (56px), `max-w-popover` (viewport − 16px).
+- Sizes: 36px controls with a mouse, 44px on touch (`pointer-coarse:`). Spacing stays on the 4px scale, with quarter steps (`my-0.75`, `size-4.5`, `h-5.5`) instead of `[3px]`-style values.
+- Media queries in JavaScript use `below("sm")` / `atLeast("xl")` from `lib/breakpoints.ts`, never a typed `(max-width: …)`.
+- Motion: 150–250 ms, `ease-clinical`; row stagger on new data, dialog/popover lift, toast slide; `reducedMotion="user"` (and the global reduced-motion CSS). Presets in `lib/motion.ts`:
+  - `popIn`: dialogs and popovers, a well-damped spring from the trigger's side.
+  - `menuPanel` + `menuItem`: dropdown lists; the panel opens and the options cascade in.
+  - `highlightSpring`: the highlight that glides between options (`layoutId`).
+  - Sidebar `layoutId` indicator.
+  - Dashboard entrance (CSS `animate-rise` / `grow-x` / `reveal-x` / `fade-in`, transform or clip only, so no layout shift).
+  - KPI count-up (`AnimatedNumber`).
 - Avoid: emoji icons, decorative pills/badges for marketing copy, slogan-style text (the user prefers plain wording), glassmorphism. Gradients only for the logo mark and photo overlays.
 
 ## UI primitives (built in 3.1)
 | Component | Use |
 |---|---|
 | `Button` / `buttonStyles()` | `variant` primary · secondary · ghost · danger; `size` sm · md · lg; `loading`; `icon`. `buttonStyles()` styles a `<Link>` as a button |
-| `IconButton` | icon-only; `label` is required (aria-label + tooltip) |
+| `IconButton` | icon-only, circular; `label` is required (aria-label + tooltip) |
 | `Input` / `Textarea` | `leading` icon, `trailing` element; invalid styling comes from `aria-invalid` |
 | `Field` | `<Field label hint error required>{(p, { labelId }) => <Input {...p} />}</Field>`: ids, `aria-describedby`, `aria-invalid` wired |
 | `Select` | `value`, `onChange`, `options: { value, label, description? }[]`, `emptyOption="All statuses"` for filters; inside a Field pass `labelId`, otherwise `aria-label` |
@@ -131,13 +154,17 @@ Next.js 16.4 App Router (Cache Components, Partial Prefetching, React Compiler) 
 | `Spinner` / `Skeleton` / `EmptyState` | loading and empty states (`label` on a standalone spinner) |
 | `Popover` | `trigger={(props) => <button {...props} />}`, children or `({ close }) => …`, `label`, `initialFocus: "first" | "panel"` (focus the panel itself when its first control is an action) |
 | `FormAlert` | form-level error box (`role=alert`), e.g. an API error that isn't tied to one field |
-| `Dialog` | `open`, `onClose`, `title`, `description`, `footer`, `size`, `dismissible` (false while saving), `initialFocusRef`. Bottom sheet on phones. A footer submit button targets a body form with `form="<id>"` |
+| `Dialog` | `open`, `onClose`, `title`, `description`, `footer`, `size`, `dismissible` (false while saving), `initialFocusRef`. Bottom sheet on phones: slides up from the edge (`sheetUp`) with a grab handle. A footer submit button targets a body form with `form="<id>"` |
 | `ConfirmDialog` | `onConfirm` may be async (spinner, not dismissible meanwhile); focus starts on Cancel; caller closes on success |
 | `Toaster` | mounted once in providers; use `useToast()` |
-| `DataTable` | `columns: Column<T>[]` (`header`, `cell`, `align`, `sort: { asc, desc, first? }`, `mobile: title · meta · field · hidden`, `className` (also hides a column per breakpoint, e.g. `hidden xl:table-cell`), `skeleton` (loading cell with the real cell's box)), `fill` (laptops: take the remaining height, scroll inside, sticky header), `rows`, `getRowId`, `caption`, `sort` + `sortHref` (URL) or `onSortChange`, `rowActions`, `loading`, `empty` |
+| `DataTable` | `columns: Column<T>[]` (`header`, `cell`, `align`, `sort: { asc, desc, first? }`, `mobile: title · meta · field · hidden`, `className` (also hides a column per breakpoint, e.g. `hidden xl:table-cell`), `skeleton` (loading cell with the real cell's box)), `fill` (laptops: take the remaining height, scroll inside, sticky header), `cardsBelow: "md" | "lg"` (wide tables use `lg`: tablets get two-column cards instead of a table wider than the screen), `rows`, `getRowId`, `caption`, `sort` + `sortHref` (URL) or `onSortChange`, `rowActions`, `loading`, `empty` |
 | `Pagination` | `page`, `totalPages`, `total`, `limit`, `hrefForPage` (URL) or `onPageChange`, `onLimitChange` (10 · 20 · 50) |
 | `SearchInput` | `onSearch` debounced 300 ms (Enter = now, Escape = clear), `defaultValue`, `label`, `pending`; re-key to reset from outside |
-| `DateRangeField` | `value: { from?, to? }` (YYYY-MM-DD, inclusive), `onChange`, `label`; presets (last 7 / 30 / 90 days, 12 months, this year, last year) counted from today in Dhaka |
+| `DateRangeField` | `value: { from?, to? }` (YYYY-MM-DD, inclusive), `onChange`, `label`; presets (last 7 / 30 / 90 days, 12 months, this year, last year) counted from today in Dhaka, beside an inline range `Calendar` (click first and last day, hover previews the band) |
+| `Calendar` | `mode: "single" \| "range"`, `value`, `onSelect`, `today` (passed in, keeps render pure), `min`, `max`, `autoFocus`. Day / month / year views (the title switches), WAI-ARIA date grid keys (arrows, Home/End, PageUp/PageDown, Shift = a year), months slide in |
+| `DatePicker` | `value` (`YYYY-MM-DD` or ""), `onChange`, `min`, `max`, `clearable` + Field props (`labelId`, `aria-describedby`, `aria-invalid` → red border). Popover calendar focused on the value or today; Clear / Today. Use with RHF `Controller` |
+| `SuggestInput` | free text + suggestions (`suggestions: string[]`), `value`, `onChange`, `onBlur`, `name`. Replaces `<datalist>`; matches anywhere, typed part in bold |
+| `FilterTokens` / `FiltersButton` | removable active-filter tokens + "Clear all" · "Filters" button with the active count |
 | `icons.tsx` | hand-drawn 24×24 stroke icons (`size`, decorative by default) |
 
 ## App shell (built in 3.2)
@@ -204,6 +231,10 @@ features/dashboard/
   components/status-split.tsx       tall segmented bar + legend
   components/ranked-bars.tsx        one-hue ranked bars, value at the tip, share on hover
 ```
+- **KPI tiles** (`KpiTile`; layout classes `KPI_TILE` / `KPI_GRID` / `KPI_VALUE` / `KPI_DETAIL`, shared with the skeleton):
+  - When the tile is at least 13.75rem wide (`@kpi`, a container query on the tile itself, so the sidebar state counts), the label and context line sit on the left and the value on the right. This holds at 1366px with the sidebar open, wider screens, collapsed sidebars and tablets. Narrower tiles stack the three lines. Tiles are 72px tall side by side and 92px stacked.
+  - A hidden copy of the final value reserves its width. The visible counting number sits in a box that never moves, so counting up and range switches cause no layout shift.
+  - Tests should read the value with `innerText`, not `textContent`, which includes the hidden copy.
 - **Charts:** colours only from `--chart-*` tokens (validated light + dark with the dataviz checker); text never wears a series colour; one chart = one short factual takeaway on the title line; every chart has a keyboard / screen-reader path (hidden table, focusable crosshair, visible values).
 - **List page recipe:** parse params on the server → fetch in parallel → client view gets data + params → `navigate(patch)` = `router.replace(href(params, patch), { scroll: false })` in `startTransition`; dim the table with `isPending`; redirect a page past the end to the last page.
 - **Never key a search box by its own text** (it remounts and loses focus as results land); key it by a counter bumped by outside "clear" actions.

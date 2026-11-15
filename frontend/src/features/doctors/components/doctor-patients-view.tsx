@@ -38,7 +38,7 @@ export const PATIENT_COLUMNS: Column<Patient>[] = [
     className: "min-w-56",
     skeleton: (
       <div className="flex flex-col">
-        <Skeleton className="my-[3px] h-3.5 w-36" />
+        <Skeleton className="my-0.75 h-3.5 w-36" />
         <Skeleton className="my-0.5 h-3 w-28" />
       </div>
     ),
@@ -53,7 +53,7 @@ export const PATIENT_COLUMNS: Column<Patient>[] = [
         {PATIENT_STATUS_LABELS[p.status]}
       </Badge>
     ),
-    skeleton: <Skeleton className="my-px h-[22px] w-24 rounded-full" />,
+    skeleton: <Skeleton className="my-px h-5.5 w-24 rounded-full" />,
   },
   {
     id: "admitted",
@@ -128,6 +128,7 @@ export function DoctorPatientsView({ doctor, patients, meta, params }: DoctorPat
       <div aria-busy={isPending} className={cn("flex min-h-0 flex-col transition-opacity duration-200", isPending && "opacity-60")}>
         <DataTable
           fill
+          cardsBelow="lg"
           columns={PATIENT_COLUMNS}
           rows={patients}
           getRowId={(p) => p.id}
@@ -204,7 +205,7 @@ export function DoctorPatientsSkeleton() {
         </div>
       </div>
       <div className="flex min-h-0 flex-col">
-        <DataTable fill loading skeletonRows={10} columns={PATIENT_COLUMNS} rows={[]} getRowId={() => ""} caption="Patients" rowActions={() => null} />
+        <DataTable fill loading cardsBelow="lg" skeletonRows={10} columns={PATIENT_COLUMNS} rows={[]} getRowId={() => ""} caption="Patients" rowActions={() => null} />
       </div>
       <div className="flex shrink-0 flex-col-reverse items-center justify-between gap-3 sm:flex-row">
         <Skeleton className="h-8 w-60 pointer-coarse:h-10" />

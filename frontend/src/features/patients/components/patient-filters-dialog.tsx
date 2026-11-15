@@ -86,7 +86,7 @@ function FiltersForm({ params, doctor, onApply, onClose }: Omit<PatientFiltersDi
       </Field>
       <div className="grid gap-1.5 sm:col-span-2">
         {/* Visible label only: the picker button already says "Admitted between: …" to screen readers. */}
-        <span aria-hidden className="text-[13px] font-medium text-ink">
+        <span aria-hidden className="text-ui font-medium text-ink">
           Admitted between
         </span>
         <DateRangeField label="Admitted between" value={{ from: draft.admittedFrom, to: draft.admittedTo }} onChange={(range) => set({ admittedFrom: range.from, admittedTo: range.to })} />

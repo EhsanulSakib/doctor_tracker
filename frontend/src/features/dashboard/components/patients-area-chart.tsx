@@ -30,9 +30,12 @@ function labelIndexes(n: number): number[] {
 export function PatientsAreaChart({
   data,
   unit,
+  delay = 0,
 }: {
   data: Point[];
   unit: BucketUnit;
+  /** Entrance: when the line starts drawing in (ms). */
+  delay?: number;
 }) {
   const [active, setActive] = useState<number | null>(null);
   const plotRef = useRef<HTMLDivElement>(null);
@@ -85,7 +88,7 @@ export function PatientsAreaChart({
           {ticks.map((tick) => (
             <span
               key={tick}
-              className="absolute right-2 -translate-y-1/2 text-[11px] leading-none text-ink-muted tabular-nums"
+              className="absolute right-2 -translate-y-1/2 text-caption leading-none text-ink-muted tabular-nums"
               style={{ top: `${y(tick)}%` }}
             >
               {formatNumber(tick)}
@@ -100,7 +103,7 @@ export function PatientsAreaChart({
           aria-roledescription="chart"
           tabIndex={0}
           aria-label={`New patients per ${unit}. Use the arrow keys to read each ${unit}.`}
-          className="relative min-w-0 flex-1 cursor-crosshair rounded-[4px] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-fg"
+          className="relative min-w-0 flex-1 cursor-crosshair rounded-mark outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-fg"
           onPointerMove={nearest}
           onPointerDown={nearest}
           onPointerLeave={() => setActive(null)}
@@ -117,11 +120,14 @@ export function PatientsAreaChart({
             />
           ))}
 
+          {/* Draws in left to right; re-keyed per range so a switch replays it. */}
           <svg
+            key={`${unit}-${data[0]?.bucket}`}
             aria-hidden
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
-            className="absolute inset-0 size-full overflow-visible"
+            className="absolute inset-0 size-full overflow-visible motion-safe:animate-reveal-x"
+            style={{ animationDelay: `${delay}ms` }}
           >
             <path d={area} className="fill-chart-accent" fillOpacity={0.1} />
             <path
@@ -156,10 +162,10 @@ export function PatientsAreaChart({
                     : { left: `calc(${x(active)}% + 10px)` }
                 }
               >
-                <p className="text-[13px] leading-5 font-semibold text-ink tabular-nums">
+                <p className="text-ui leading-5 font-semibold text-ink tabular-nums">
                   {patientsText(point.count)}
                 </p>
-                <p className="text-[11px] leading-4 text-ink-muted">
+                <p className="text-caption leading-4 text-ink-muted">
                   {bucketLabel(point.bucket, unit)}
                 </p>
               </div>
@@ -175,7 +181,7 @@ export function PatientsAreaChart({
             key={data[i].bucket}
             // Phones: first, middle and last only (six labels collide on a narrow plot).
             className={cn(
-              "absolute top-1.5 text-[11px] leading-none whitespace-nowrap text-ink-muted",
+              "absolute top-1.5 text-caption leading-none whitespace-nowrap text-ink-muted",
               k !== 0 &&
                 k !== all.length - 1 &&
                 k !== Math.floor((all.length - 1) / 2) &&

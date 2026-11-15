@@ -21,6 +21,8 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   // Automatic memoization: components and values re-render only when their inputs change.
   reactCompiler: true,
+  // Dev only: the Next.js indicator sat on top of the sidebar's profile (bottom-left).
+  devIndicators: { position: "bottom-right" },
   images: {
     // AVIF first (smallest), WebP fallback; Next picks per browser from the Accept header.
     formats: ["image/avif", "image/webp"],

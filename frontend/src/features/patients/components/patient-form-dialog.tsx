@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { Controller, useForm, type Resolver } from "react-hook-form";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Dialog } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { FormAlert } from "@/components/ui/form-alert";
@@ -188,7 +189,13 @@ function PatientForm({
         )}
       </Field>
       <Field label="Admitted on" required error={errors.admissionDate?.message}>
-        {(p) => <Input {...p} {...register("admissionDate")} type="date" min="1950-01-01" max={todayIso()} />}
+        {(p, { labelId }) => (
+          <Controller
+            control={control}
+            name="admissionDate"
+            render={({ field }) => <DatePicker {...p} labelId={labelId} value={field.value} onChange={field.onChange} onBlur={field.onBlur} min="1950-01-01" max={todayIso()} />}
+          />
+        )}
       </Field>
       <Field label="Notes" hint="Optional" error={errors.notes?.message} className="sm:col-span-2">
         {(p) => <Textarea {...p} {...register("notes")} rows={3} maxLength={1000} />}

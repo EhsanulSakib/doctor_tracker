@@ -24,7 +24,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Phones / tablets: normal window scrolling. lg and up: exactly one viewport tall, no window
           scrollbar; only <main> scrolls (thin scrollbar) if a page is ever taller than the screen. */}
-      <div className="flex min-h-dvh flex-col transition-[padding] duration-200 ease-clinical md:pl-16 lg:h-dvh lg:pl-60 lg:sidebar-collapsed:pl-16">
+      <div className="flex min-h-dvh flex-col transition-[padding] duration-200 ease-clinical md:pl-sidebar-rail lg:h-dvh lg:pl-sidebar lg:sidebar-collapsed:pl-sidebar-rail">
         <Topbar
           userSlot={
             <Suspense fallback={<UserMenuSkeleton />}>

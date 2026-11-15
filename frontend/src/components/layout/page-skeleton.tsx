@@ -13,7 +13,7 @@ export function EmptyCardSkeleton() {
     <Card>
       <div className="flex flex-col items-center px-6 py-12">
         <Skeleton className="mb-4 size-12 rounded-full" />
-        <div className="flex h-[22.5px] items-center">
+        <div className="flex h-[calc(var(--text-lead)*1.5)] items-center">
           <Skeleton className="h-4 w-28" />
         </div>
       </div>

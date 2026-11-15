@@ -48,7 +48,7 @@ export function MonthCalendar({ today }: { today: string }) {
   return (
     <div>
       <div className="mb-2 flex items-center gap-1">
-        <p className="flex-1 pl-1 text-[13px] font-semibold text-ink" aria-live="polite">
+        <p className="flex-1 pl-1 text-ui font-semibold text-ink" aria-live="polite">
           {label}
         </p>
         <button
@@ -67,12 +67,12 @@ export function MonthCalendar({ today }: { today: string }) {
         <IconButton size="sm" label="Next month" icon={<ChevronRightIcon />} onClick={() => setShown((m) => shiftMonth(m, 1))} />
       </div>
 
-      <table className="w-full table-fixed border-collapse text-center text-[12.5px]">
+      <table className="w-full table-fixed border-collapse text-center text-ui">
         <caption className="sr-only">{label}</caption>
         <thead>
           <tr>
             {WEEKDAYS.map(([short, full]) => (
-              <th key={short} scope="col" abbr={full} className="h-7 text-[11px] font-medium text-ink-subtle">
+              <th key={short} scope="col" abbr={full} className="h-7 text-caption font-medium text-ink-subtle">
                 {short}
               </th>
             ))}

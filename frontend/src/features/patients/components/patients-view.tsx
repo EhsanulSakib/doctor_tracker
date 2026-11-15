@@ -32,7 +32,7 @@ const BASE_PATH = "/patients";
 /** Two stacked skeleton bars with the box of a 20px + 16px two-line cell (flex-col: margins add up, never collapse). */
 const twoLineSkeleton = (first: string, second: string) => (
   <div className="flex flex-col">
-    <Skeleton className={cn("my-[3px] h-3.5", first)} />
+    <Skeleton className={cn("my-0.75 h-3.5", first)} />
     <Skeleton className={cn("my-0.5 h-3", second)} />
   </div>
 );
@@ -64,15 +64,15 @@ export const PATIENTS_COLUMNS: Column<Patient>[] = [
         {PATIENT_STATUS_LABELS[p.status]}
       </Badge>
     ),
-    skeleton: <Skeleton className="my-px h-[22px] w-24 rounded-full" />,
+    skeleton: <Skeleton className="my-px h-5.5 w-24 rounded-full" />,
   },
   {
     id: "doctor",
     header: "Doctor",
     cell: (p) =>
       p.doctor ? (
-        <div className="max-w-52 min-w-0">
-          <Link href={`/doctors/${p.doctor.id}`} className="block truncate rounded-sm text-sm leading-5 text-ink transition-colors hover:text-accent-fg focus-ring">
+        <div className="relative max-w-52 min-w-0">
+          <Link href={`/doctors/${p.doctor.id}`} className="block truncate rounded-sm text-sm leading-5 text-ink transition-colors after:absolute after:inset-x-0 after:-inset-y-2.5 hover:text-accent-fg focus-ring">
             {p.doctor.name}
           </Link>
           <p className="truncate text-xs leading-4 text-ink-muted">{p.doctor.specialization}</p>
@@ -157,6 +157,7 @@ export function PatientsView({ patients, meta, params, doctor }: PatientsViewPro
       <div aria-busy={isPending} className={cn("flex min-h-0 flex-col transition-opacity duration-200", isPending && "opacity-60")}>
         <DataTable
           fill
+          cardsBelow="lg"
           columns={PATIENTS_COLUMNS}
           rows={patients}
           getRowId={(p) => p.id}
@@ -260,7 +261,7 @@ export function PatientsListSkeleton() {
         <Skeleton className="ml-auto h-9 w-11 pointer-coarse:h-11 sm:w-32" />
       </div>
       <div className="flex min-h-0 flex-col">
-        <DataTable fill loading skeletonRows={10} columns={PATIENTS_COLUMNS} rows={[]} getRowId={() => ""} caption="Patients" rowActions={() => null} />
+        <DataTable fill loading cardsBelow="lg" skeletonRows={10} columns={PATIENTS_COLUMNS} rows={[]} getRowId={() => ""} caption="Patients" rowActions={() => null} />
       </div>
       <div className="flex shrink-0 flex-col-reverse items-center justify-between gap-3 sm:flex-row">
         <Skeleton className="h-8 w-60 pointer-coarse:h-10" />

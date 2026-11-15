@@ -30,9 +30,9 @@ import {
  * never moves the icons next to it. Phones: icon only. `sm`: time. `lg`: + date. `xl`: + city.
  */
 const TRIGGER_BOX =
-  "flex size-9 shrink-0 items-center justify-center gap-2 rounded-control text-[13px] pointer-coarse:size-11 " +
-  "sm:w-[118px] sm:justify-start sm:border sm:border-line sm:px-2.5 sm:pointer-coarse:w-[118px] " +
-  "lg:w-[200px] lg:pointer-coarse:w-[200px] xl:w-[252px] xl:pointer-coarse:w-[252px]";
+  "flex size-9 shrink-0 items-center justify-center gap-2 rounded-control text-ui pointer-coarse:size-11 " +
+  "sm:w-29.5 sm:justify-start sm:border sm:border-line sm:px-2.5 sm:pointer-coarse:w-29.5 " +
+  "lg:w-50 lg:pointer-coarse:w-50 xl:w-63 xl:pointer-coarse:w-63";
 
 /** Topbar clock (Bangladesh time by default). Opens a calendar and the user's world clocks. */
 export function WorldClock() {
@@ -44,7 +44,7 @@ export function WorldClock() {
     <Popover
       label="Calendar and time zones"
       align="end"
-      className="max-h-(--panel-max-height) w-[340px] overflow-y-auto p-0 scrollbar-thin md:w-[680px]"
+      className="max-h-(--panel-max-height) w-85 overflow-y-auto p-0 scrollbar-thin md:w-170"
       trigger={(props) => (
         <button
           {...props}
@@ -58,7 +58,7 @@ export function WorldClock() {
               <span className="hidden font-semibold tabular-nums text-ink sm:inline">{formatTime(now, main)}</span>
               <span aria-hidden className="hidden h-4 w-px shrink-0 bg-line lg:block" />
               <span className="hidden truncate lg:inline">{formatShortDay(now, main)}</span>
-              <span className="hidden min-w-0 truncate text-ink-subtle xl:inline">· {city}</span>
+              <span className="hidden min-w-0 truncate text-ink-muted xl:inline">· {city}</span>
             </>
           ) : (
             <>
@@ -97,8 +97,8 @@ function ClockPanel() {
   return (
     <div className="md:grid md:grid-cols-[300px_1fr]">
       <section aria-label="Calendar" className="p-4 md:border-r md:border-line">
-        <p className="text-[26px] leading-8 font-semibold tracking-tight tabular-nums text-ink">{formatTime(now, main, true)}</p>
-        <p className="mt-1 text-[13px] text-ink-muted">{formatLongDate(now, main)}</p>
+        <p className="text-figure leading-8 font-semibold tracking-tight tabular-nums text-ink">{formatTime(now, main, true)}</p>
+        <p className="mt-1 text-ui text-ink-muted">{formatLongDate(now, main)}</p>
         <p className="text-xs text-ink-subtle">
           {cityOf(main)} · {offsetLabel(mainOffset)}
         </p>
@@ -158,13 +158,13 @@ function ZoneRow({ zone, now, prefs, mainOffset }: { zone: string; now: Date; pr
   return (
     <li className="flex items-center gap-2 rounded-control py-1.5 pr-1 pl-2 transition-colors hover:bg-paper-2">
       <div className="min-w-0 flex-1">
-        <p className="flex items-baseline gap-1.5 text-[13px] font-medium text-ink">
+        <p className="flex items-baseline gap-1.5 text-ui font-medium text-ink">
           <span className="truncate">{city}</span>
           {isMain && <span className="shrink-0 text-xs font-medium text-accent-fg">Main</span>}
         </p>
         <p className="truncate text-xs text-ink-muted">{detail}</p>
       </div>
-      <span className="shrink-0 text-[13px] font-semibold tabular-nums text-ink">{formatTime(now, zone)}</span>
+      <span className="shrink-0 text-ui font-semibold tabular-nums text-ink">{formatTime(now, zone)}</span>
       <div className="flex shrink-0 items-center">
         {isMain ? (
           <span className="flex size-8 items-center justify-center text-accent-fg pointer-coarse:size-10" title="Main clock">

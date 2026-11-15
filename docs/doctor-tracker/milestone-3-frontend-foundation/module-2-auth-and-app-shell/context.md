@@ -31,6 +31,12 @@ request (page route; prefetches and /api/* skip the proxy via the matcher)
 
 ## Shell layout
 - Desktop ≥ 1024px: 240px sidebar, collapsible to a 64px rail (saved in localStorage, applied before paint through `data-sidebar` on `<html>` and a `sidebar-collapsed:` variant). Content is full width (the 1280px cap was removed in the redesign).
+- Sidebar layout (updated 2026-11-15 at the user's request):
+  - No "Menu" label.
+  - The collapse button sits next to the logo. Collapsed, the logo itself is the expand button and shows the panel icon on hover / focus.
+  - The signed-in admin sits at the bottom: avatar, name, an "Admin" role tag and a sign-out icon button. In the rail they stack. The name and tag are skeletons until the streamed account menu fills the auth store; sign out always works.
+  - The toggle's `aria-expanded` comes from `useSidebarCollapsed()` (`useSyncExternalStore` on `<html data-sidebar>`). The shell can hydrate after the preferences were synced into Redux, and React doesn't patch attribute mismatches while hydrating, so the server value is used for the hydration pass and the real value right after.
+- Top bar icon buttons (bell, theme) have a circular hover background.
 - Laptop and up (≥ 1024px): the shell is exactly one viewport tall (`lg:h-dvh`), so the window never shows a scrollbar; `<main>` is the only scroll container (thin scrollbar) if a page is ever taller than the screen. No `scrollbar-gutter` there, so no empty strip on the right. Below 1024px the window scrolls normally (with a stable gutter).
 - Tablet 768–1023px: always the 64px icon rail (labels as screen-reader text + tooltips).
 - Phone < 768px: top bar (menu button, page name, clock icon, bell, theme, account) + slide-in drawer (`Drawer` primitive: inert app, focus trap, Escape, closes on navigation).

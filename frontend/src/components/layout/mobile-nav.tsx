@@ -32,10 +32,10 @@ export function MobileNav() {
 
   return (
     <Drawer open={open} onClose={close} label="Navigation">
-      <div className="flex h-14 shrink-0 items-center justify-between border-b border-line px-4">
+      <div className="flex h-topbar shrink-0 items-center justify-between border-b border-line px-4">
         <div className="flex items-center gap-2.5">
           <BrandMark className="size-7" />
-          <span className="text-[15px] font-semibold tracking-tight">Doctor Tracker</span>
+          <span className="text-lead font-semibold tracking-tight">Doctor Tracker</span>
         </div>
         <IconButton label="Close navigation" icon={<XIcon size={18} />} onClick={close} />
       </div>
@@ -51,7 +51,7 @@ export function MobileNav() {
                   onClick={close}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex h-12 items-center gap-3 rounded-control px-3 text-[15px] font-medium transition-colors focus-ring",
+                    "flex h-12 items-center gap-3 rounded-control px-3 text-lead font-medium transition-colors focus-ring",
                     active ? "bg-accent-soft text-accent-fg" : "text-ink-muted hover:bg-paper-2 hover:text-ink",
                   )}
                 >
@@ -72,7 +72,7 @@ export function MobileNav() {
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-ink">{user.name}</p>
-              <p className="truncate text-[13px] text-ink-muted">{user.email}</p>
+              <p className="truncate text-ui text-ink-muted">{user.email}</p>
             </div>
           </div>
           <Button

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertTriangleIcon, ChevronDownIcon, LogOutIcon } from "@/components/ui/icons";
 import { Popover } from "@/components/ui/popover";
@@ -13,7 +12,7 @@ import { cn } from "@/lib/utils";
 /**
  * One fixed-size box for the trigger, its loading skeleton and its fallback: the account menu streams in
  * after the shell, and a size change would push the theme toggle sideways (layout shift).
- * Phones: a square avatar button. From `sm`: 176px with avatar, name (truncated) and chevron.
+ * Phones: a square avatar button. From `sm`, 176px with avatar, name (truncated) and chevron.
  */
 const TRIGGER_BOX =
   "flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-control pointer-coarse:h-11 pointer-coarse:w-11 " +
@@ -53,10 +52,10 @@ export function UserMenu({ user }: { user: PublicUser }) {
     >
       <div className="border-b border-line p-3.5">
         <p className="truncate text-sm font-medium text-ink">{user.name}</p>
-        <p className="truncate text-[13px] text-ink-muted">{user.email}</p>
-        <Badge tone="accent" className="mt-2.5">
-          Administrator
-        </Badge>
+        <p className="truncate text-ui text-ink-muted">{user.email}</p>
+        <span className="mt-2 inline-flex h-5 items-center rounded-tag bg-accent-soft px-1.5 text-caption font-semibold tracking-wide text-accent-fg uppercase">
+          Admin
+        </span>
       </div>
       <div className="p-1.5">
         <Button

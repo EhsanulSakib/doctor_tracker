@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { addDaysIso, cn, formatDate, formatShortDate, todayIso } from "@/lib/utils";
 import { Button } from "./button";
-import { Field } from "./field";
+import { Calendar, type DateRange } from "./calendar";
 import { CalendarIcon } from "./icons";
-import { fieldStyles, Input } from "./input";
+import { fieldStyles } from "./input";
 import { Popover } from "./popover";
 
 /** Inclusive calendar dates as `YYYY-MM-DD` (what the API's `…From` / `…To` filters take). */
-export type DateRange = { from?: string; to?: string };
+export type { DateRange };
 
 type DateRangeFieldProps = {
   value: DateRange;
@@ -43,9 +43,12 @@ export function formatRange({ from, to }: DateRange): string | null {
   return null;
 }
 
+const sameRange = (a: DateRange, b: DateRange) => a.from === b.from && a.to === b.to;
+
 /**
- * Date-range filter: one-click presets, or two native date inputs (keyboard and screen-reader friendly,
- * and the phone's own date picker on mobile). Edits stay a draft until "Apply".
+ * Date-range filter: one-click presets beside the app's own range calendar (click the first day, then
+ * the last; the band previews it as you move). Edits stay a draft until "Apply". Nothing in here opens a
+ * second floating panel, so it works inside dialogs and bottom sheets.
  */
 export function DateRangeField({ value, onChange, label, placeholder = "Any date", align = "start", className }: DateRangeFieldProps) {
   const [open, setOpen] = useState(false);
@@ -62,7 +65,7 @@ export function DateRangeField({ value, onChange, label, placeholder = "Any date
   };
 
   const text = formatRange(value);
-  const invalid = Boolean(draft.from && draft.to && draft.from > draft.to);
+  const draftText = formatRange(draft);
 
   return (
     <Popover
@@ -70,7 +73,7 @@ export function DateRangeField({ value, onChange, label, placeholder = "Any date
       onOpenChange={handleOpenChange}
       label={label}
       align={align}
-      className="w-[min(23rem,calc(100vw-16px))]"
+      className="w-auto p-0"
       trigger={(props) => (
         <button
           {...props}
@@ -84,77 +87,66 @@ export function DateRangeField({ value, onChange, label, placeholder = "Any date
             className,
           )}
         >
-          <CalendarIcon className="shrink-0 text-ink-subtle" />
+          <CalendarIcon className={cn("shrink-0 transition-colors", open ? "text-accent-fg" : "text-ink-subtle")} />
           <span className={cn("truncate", !text && "text-ink-subtle")}>{text ?? placeholder}</span>
         </button>
       )}
     >
       {({ close }) => (
-        <div className="grid gap-3">
-          <p className="text-label font-medium uppercase text-ink-muted">{label}</p>
-          <div className="grid grid-cols-2 gap-1.5">
-            {presetsFor(today).map((preset) => (
-              <button
-                key={preset.label}
-                type="button"
+        <div className="flex max-h-(--panel-max-height) flex-col overflow-y-auto scrollbar-thin sm:flex-row">
+          <div className="flex flex-col gap-1 border-b border-line p-2 sm:w-40 sm:border-r sm:border-b-0">
+            <p className="px-2 pt-1 pb-1.5 text-label font-medium text-ink-muted uppercase">{label}</p>
+            <div className="grid grid-cols-2 gap-1 sm:grid-cols-1">
+              {presetsFor(today).map((preset) => {
+                const current = sameRange(preset.range, draft);
+                return (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => {
+                      onChange(preset.range);
+                      close();
+                    }}
+                    className={cn(
+                      "h-8 rounded-full px-3 text-left text-ui transition-colors focus-ring pointer-coarse:h-10",
+                      current ? "bg-accent-soft font-medium text-accent-fg" : "text-ink hover:bg-paper-2",
+                    )}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="p-3">
+            <Calendar mode="range" today={today} value={draft} max={today} onSelect={setDraft} />
+            <p className="mt-2 h-5 text-center text-xs leading-5 text-ink-muted tabular-nums" aria-live="polite">
+              {draft.from && !draft.to ? "Now pick the last day" : (draftText ?? "Pick the first day")}
+            </p>
+            <div className="mt-2 flex items-center justify-between gap-2 border-t border-line pt-2">
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => {
-                  onChange(preset.range);
+                  onChange({});
                   close();
                 }}
-                className="rounded-control border border-line px-2.5 py-1.5 text-left text-[13px] text-ink transition-colors hover:border-line-strong hover:bg-paper-2 focus-ring pointer-coarse:py-2.5"
               >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 border-t border-line pt-3">
-            <Field label="From">
-              {(control) => (
-                <Input
-                  {...control}
-                  type="date"
-                  value={draft.from ?? ""}
-                  max={draft.to || today}
-                  onChange={(event) => setDraft((d) => ({ ...d, from: event.target.value || undefined }))}
-                />
-              )}
-            </Field>
-            <Field label="To" error={invalid ? "Must be on or after the start" : undefined}>
-              {(control) => (
-                <Input
-                  {...control}
-                  type="date"
-                  value={draft.to ?? ""}
-                  min={draft.from}
-                  max={today}
-                  onChange={(event) => setDraft((d) => ({ ...d, to: event.target.value || undefined }))}
-                />
-              )}
-            </Field>
-          </div>
-
-          <div className="flex items-center justify-between gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                onChange({});
-                close();
-              }}
-            >
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              disabled={invalid}
-              onClick={() => {
-                onChange(draft);
-                close();
-              }}
-            >
-              Apply
-            </Button>
+                Clear
+              </Button>
+              <Button
+                size="sm"
+                disabled={!draft.from}
+                onClick={() => {
+                  // A single picked day is a one-day range.
+                  onChange({ from: draft.from, to: draft.to ?? draft.from });
+                  close();
+                }}
+              >
+                Apply
+              </Button>
+            </div>
           </div>
         </div>
       )}

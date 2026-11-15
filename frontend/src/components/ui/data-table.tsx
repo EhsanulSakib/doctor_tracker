@@ -54,6 +54,8 @@ type DataTableProps<T> = {
    * table, with a sticky header, instead of growing the page.
    */
   fill?: boolean;
+  /** Where the table replaces the cards: `md` (default) or `lg` (wide tables: tablets get two-column cards). */
+  cardsBelow?: "md" | "lg";
 };
 
 export function DataTable<T>({
@@ -69,6 +71,7 @@ export function DataTable<T>({
   loading = false,
   skeletonRows = 6,
   fill = false,
+  cardsBelow = "md",
 }: DataTableProps<T>) {
   // Server-rendered rows are visible immediately (no hidden-until-hydrated content); after that, a
   // new page of rows mounts a new body (key) and staggers in.
@@ -91,7 +94,8 @@ export function DataTable<T>({
       {/* Desktop / tablet: a real table. */}
       <div
         className={cn(
-          "hidden overflow-x-auto rounded-panel border border-line bg-surface shadow-card scrollbar-thin md:block",
+          "hidden overflow-x-auto rounded-panel border border-line bg-surface shadow-card scrollbar-thin",
+          cardsBelow === "lg" ? "lg:block" : "md:block",
           fill && "lg:min-h-0 lg:overflow-auto",
         )}
       >
@@ -106,7 +110,7 @@ export function DataTable<T>({
                   aria-sort={ariaSort(column.sort, sort)}
                   className={cn(
                     // The bottom rule is a shadow: a border on a sticky header row scrolls away with the rows.
-                    "whitespace-nowrap bg-paper px-4 py-3 text-left text-label font-semibold uppercase text-ink-muted shadow-[inset_0_-1px_0_var(--line)]",
+                    "whitespace-nowrap bg-paper px-4 py-3 text-left text-label font-semibold uppercase text-ink-muted shadow-table-head",
                     fill && "lg:sticky lg:top-0 lg:z-10",
                     column.align === "right" && "text-right",
                     column.className,
@@ -120,7 +124,7 @@ export function DataTable<T>({
                 </th>
               ))}
               {rowActions && (
-                <th scope="col" className={cn("w-px bg-paper px-4 py-2.5 shadow-[inset_0_-1px_0_var(--line)]", fill && "lg:sticky lg:top-0 lg:z-10")}>
+                <th scope="col" className={cn("w-px bg-paper px-4 py-2.5 shadow-table-head", fill && "lg:sticky lg:top-0 lg:z-10")}>
                   <span className="sr-only">Actions</span>
                 </th>
               )}
@@ -167,7 +171,7 @@ export function DataTable<T>({
 
       {/* Phones: one card per row (a wide table would scroll sideways). */}
       {/* grid-cols-1 = minmax(0, 1fr): a long unbroken value (email) truncates instead of widening the card past the screen. */}
-      <ul className="grid grid-cols-1 gap-2 md:hidden" aria-label={caption}>
+      <ul className={cn("grid grid-cols-1 gap-2", cardsBelow === "lg" ? "md:grid-cols-2 md:gap-3 lg:hidden" : "md:hidden")} aria-label={caption}>
         {loading
           ? Array.from({ length: Math.min(skeletonRows, 4) }, (_, i) => (
               <li key={i} className="grid gap-3 rounded-panel border border-line bg-surface p-4 shadow-card">
@@ -188,7 +192,7 @@ export function DataTable<T>({
                   <div className="min-w-0">
                     {titleColumn && <div className="font-medium text-ink">{titleColumn.cell(row)}</div>}
                     {metaColumns.length > 0 && (
-                      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-ink-muted">
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-ui text-ink-muted">
                         {metaColumns.map((column) => (
                           <span key={column.id}>{column.cell(row)}</span>
                         ))}
@@ -198,11 +202,12 @@ export function DataTable<T>({
                   {rowActions && <div className="-mr-2 -mt-1.5 flex shrink-0 items-center">{rowActions(row)}</div>}
                 </div>
                 {fieldColumns.length > 0 && (
-                  <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 border-t border-line pt-3 text-[13px]">
+                  <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 border-t border-line pt-3 text-ui">
                     {fieldColumns.map((column) => (
                       <div key={column.id} className="min-w-0">
                         <dt className="text-label uppercase text-ink-muted">{column.header}</dt>
-                        <dd className="mt-0.5 truncate text-ink">{column.cell(row)}</dd>
+                        {/* Clip sideways only (ellipsis still works): a link's enlarged tap area may reach above and below. */}
+                        <dd className="mt-0.5 overflow-x-clip text-ellipsis whitespace-nowrap text-ink">{column.cell(row)}</dd>
                       </div>
                     ))}
                   </dl>
@@ -244,7 +249,7 @@ function SortHeader<T>({
   const next = nextDirection === "asc" ? sort.asc : sort.desc;
 
   const className = cn(
-    "group -mx-1.5 inline-flex items-center gap-1 rounded-[4px] px-1.5 py-0.5 uppercase transition-colors hover:text-ink focus-ring",
+    "group -mx-1.5 inline-flex items-center gap-1 rounded-mark px-1.5 py-0.5 uppercase transition-colors hover:text-ink focus-ring",
     direction && "text-ink",
     column.align === "right" && "flex-row-reverse",
   );

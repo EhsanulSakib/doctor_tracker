@@ -82,7 +82,7 @@ function ToastItem({ toast }: { toast: Toast }) {
       {ICONS[toast.tone]}
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-ink">{toast.title}</p>
-        {toast.description && <p className="mt-0.5 text-[13px] text-ink-muted">{toast.description}</p>}
+        {toast.description && <p className="mt-0.5 text-ui text-ink-muted">{toast.description}</p>}
       </div>
       <IconButton
         label="Dismiss notification"

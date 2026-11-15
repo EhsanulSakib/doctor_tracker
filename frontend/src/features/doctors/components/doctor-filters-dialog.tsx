@@ -83,7 +83,7 @@ function FiltersForm({ params, hospitals, onApply, onClose }: Omit<DoctorFilters
       </Field>
       <div className="grid gap-1.5 sm:col-span-2">
         {/* Visible label only: the picker button already says "Joined between: …" to screen readers. */}
-        <span aria-hidden className="text-[13px] font-medium text-ink">
+        <span aria-hidden className="text-ui font-medium text-ink">
           Joined between
         </span>
         <DateRangeField

@@ -297,6 +297,53 @@ Open **Dashboard** (after `npm run seed`).
 
 **Result 2026-11-15 (headless Chrome, production build):** 18/18 automated (scenarios 1–7, 9–11; values compared with the API response, skeleton boxes identical). Regressions: doctors 32/32, patients 17/17, layout 18/18, UI 26/26, top bar 20/20.
 
+### UI polish (2026-11-15)
+| # | Scenario | Steps | Expected |
+|---|---|---|---|
+| 1 | Sidebar | look at the sidebar on a laptop | no "Menu" label; collapse icon next to the logo; your avatar, name, an "Admin" tag and a sign-out icon at the bottom |
+| 2 | Collapse | collapse, hover the logo, click it, reload in between | rail with avatar and sign-out stacked; the logo turns into the expand icon on hover and expands; the state is kept after reload |
+| 3 | Sign out from the sidebar | click the sign-out icon | on /login |
+| 4 | Round buttons | hover the bell and the moon / sun | a circular highlight |
+| 5 | Dropdowns | open Specialization, move with ↓ ↑ and the mouse | the list opens with its options cascading in; one highlight glides to the option under the pointer / keyboard; the chosen one has a check; "All …" is separated by a line |
+| 6 | Date picker | New doctor → Joined on | the app's calendar (not the browser's) opens on today; ← → ↑ ↓ move, PageUp / PageDown change month, Enter picks; future days are disabled; the title switches to months, then years; Clear / Today |
+| 7 | Range picker | Patients → Filters → Admitted between | presets on the left; click two days (any order) → a shaded band, hover previews it; Apply fills the field |
+| 8 | Hospital suggestions | New doctor → Hospital → type "lake" | a styled list with the typed part in bold; ↓ + Enter picks; any other text is still accepted |
+| 9 | Dashboard motion | open the dashboard from the sidebar | cards rise in one after another, the numbers count up to their values, the line draws in left to right, bars grow from their baseline; nothing jumps; with "reduce motion" on, everything is simply there |
+
+**Result 2026-11-15 (headless Chrome, production build):** new UI checks 13/13 (scenarios 1–2, 4–9); regressions: shell 26/26, top bar 20/20, doctors 32/32, patients 17/17, dashboard 18/18, layout 18/18.
+
+### Polish pass (2026-11-15)
+| # | Scenario | Steps | Expected |
+|---|---|---|---|
+| 1 | Tablet lists | ~820px wide: Doctors, Patients, a doctor's profile | two-column cards with edit / delete visible (no table cut off at the right) |
+| 2 | Phone tap targets | ~375px: tap doctor names in cards and on the dashboard, phone / email on a profile | easy to hit (≥ 40px tall), never the neighbouring link |
+| 3 | Bottom sheet | ~375px: open any form or Filters | slides up from the bottom with a small grab handle; Escape / ✕ / backdrop close it |
+| 4 | Icon buttons | hover ✕, edit, delete, collapse, bell, theme | round highlight everywhere |
+| 5 | Contrast | both themes | all text readable, including the % on the status blocks and the "Inactive" badge |
+
+**Result 2026-11-15:** automated audit clean: text contrast in light and dark on every screen; 375px tap targets ≥ 40px with no sideways scroll. Suites: shell 26/26, top bar 20/20, doctors 32/32, patients 17/17, dashboard 18/18, layout 18/18, UI 13/13.
+
+### Design-system token audit (2026-11-15)
+| # | Scenario | Steps | Expected |
+|---|---|---|---|
+| 1 | Nothing changed visually | compare every screen with the README screenshots, light and dark | same colours, sizes, spacing and corners |
+| 2 | Login photo | sign out, view at ≥ 1024px | deep indigo fades under white text; white logo tile with the gradient pulse |
+| 3 | Focus | Tab through a list page in both themes | indigo outline on buttons and links (light indigo in dark); fields show an accent border + soft ring |
+| 4 | Phone dialogs | ~375px: open any form | still a bottom sheet; centred dialog from 640px |
+| 5 | Sidebar sizes | collapse and expand on a laptop; tablet width | 240px ↔ 64px rail, content padding follows; logo row lines up with the top bar |
+
+**Result 2026-11-15:** computed-style snapshot before and after: 4,112 elements in 13 states (dashboard, doctors, patients, profile, dialog, dropdown in both themes, plus login) identical apart from the three 10px legend swatches (corner 3px → 4px, the shared `rounded-mark`). Gradient, shadow, SVG and focus checks 22/22. Suites: shell 26/26, top bar 20/20, doctors 32/32, patients 17/17, dashboard 18/18, layout 18/18, UI 13/13; contrast and touch audit clean.
+
+### KPI tiles: value on the right (2026-11-15)
+| # | Scenario | Steps | Expected |
+|---|---|---|---|
+| 1 | Laptop | Dashboard at 1366px or wider, light and dark | label and context line on the left, number on the right, vertically centred; nothing cut off on 30 days, 90 days or 12 months |
+| 2 | Narrow tiles | 1280px with the sidebar open, then collapse the sidebar | stacked (label, number, context) while open; number moves to the right once collapsed |
+| 3 | Tablet / phone | ~820px, then ~375px | tablet: number on the right; phone: stacked two-by-two tiles |
+| 4 | Count-up | reload the Dashboard, then switch ranges | numbers count up in place; nothing around them moves |
+
+**Result 2026-11-15:** checked at 1920, 1440, 1366 (sidebar open and collapsed), 1280 (both), 1024, 820, 640 and 375px on 30 days and 12 months: the expected layout everywhere, nothing clipped. At 1024px the long label "New patients, last 30 days" ends in an ellipsis as before. Layout shift 0 on load and on a range switch; 1366×768 still has no window scrollbar. Suites: dashboard 18/18, layout 18/18, UI 13/13; contrast and touch audit clean.
+
 ## Edge-case checklist (global)
 - [x] Every protected endpoint returns 401 without a cookie (`/api/auth/me`, `/api/doctors/*`, `/api/patients/*`, `/api/dashboard/*`)
 - [x] Every protected page redirects to `/login?next=` without a session (proxy); `?next=` can't point off-site

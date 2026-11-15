@@ -13,14 +13,14 @@ export function BrandMark({ className, inverted = false }: { className?: string;
           <stop offset="1" style={{ stopColor: "var(--accent-2)" }} />
         </linearGradient>
       </defs>
-      <rect width="32" height="32" rx="9" fill={inverted ? "#ffffff" : `url(#${gradientId})`} />
+      <rect width="32" height="32" rx="9" style={{ fill: inverted ? "var(--on-photo)" : `url(#${gradientId})` }} />
       <path
         d="M6.5 17h5l2.5-6 4 11 2.5-5h5"
         fill="none"
         strokeWidth="2.2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        stroke={inverted ? `url(#${gradientId})` : "#ffffff"}
+        style={{ stroke: inverted ? `url(#${gradientId})` : "var(--accent-ink)" }}
       />
     </svg>
   );

@@ -21,7 +21,7 @@ export function DoctorsListSkeleton() {
         <Skeleton className="ml-auto h-9 w-11 pointer-coarse:h-11 sm:w-32" />
       </div>
       <div className="flex min-h-0 flex-col">
-        <DataTable fill loading skeletonRows={10} columns={DOCTOR_COLUMNS} rows={[]} getRowId={() => ""} caption="Doctors" rowActions={noActions} />
+        <DataTable fill loading cardsBelow="lg" skeletonRows={10} columns={DOCTOR_COLUMNS} rows={[]} getRowId={() => ""} caption="Doctors" rowActions={noActions} />
       </div>
       <div className="flex shrink-0 flex-col-reverse items-center justify-between gap-3 sm:flex-row">
         <Skeleton className="h-8 w-60 pointer-coarse:h-10" />

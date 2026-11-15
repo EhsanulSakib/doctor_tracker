@@ -83,7 +83,7 @@ export function TimezoneCombobox({ exclude, now, onSelect, onCancel }: TimezoneC
             setActive(0);
           }}
           onKeyDown={handleKeyDown}
-          className={cn(fieldStyles, "h-9 pl-8 text-[13px] pointer-coarse:h-11")}
+          className={cn(fieldStyles, "h-9 pl-8 text-ui pointer-coarse:h-11")}
         />
       </div>
 
@@ -104,7 +104,7 @@ export function TimezoneCombobox({ exclude, now, onSelect, onCancel }: TimezoneC
             )}
           >
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-medium text-ink">{option.city}</span>
+              <span className="block truncate text-ui font-medium text-ink">{option.city}</span>
               <span className="block truncate text-xs text-ink-muted">
                 {option.longName} · {offsetLabel(offsetMinutes(now, option.id))}
               </span>
@@ -113,7 +113,7 @@ export function TimezoneCombobox({ exclude, now, onSelect, onCancel }: TimezoneC
           </li>
         ))}
       </ul>
-      {options.length === 0 && <p className="px-2 py-3 text-[13px] text-ink-muted">No matching time zones</p>}
+      {options.length === 0 && <p className="px-2 py-3 text-ui text-ink-muted">No matching time zones</p>}
     </div>
   );
 }

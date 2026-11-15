@@ -47,7 +47,7 @@ export function Pagination({ page, totalPages, total, limit, hrefForPage, onPage
 
   const pageControl = (target: number, content: ReactNode, options: { label: string; current?: boolean; disabled?: boolean }) => {
     const className = cn(
-      "inline-flex h-8 min-w-8 items-center justify-center rounded-control px-2 text-[13px] tabular-nums transition-colors focus-ring pointer-coarse:h-10 pointer-coarse:min-w-10",
+      "inline-flex h-8 min-w-8 items-center justify-center rounded-control px-2 text-ui tabular-nums transition-colors focus-ring pointer-coarse:h-10 pointer-coarse:min-w-10",
       options.current ? "bg-accent font-medium text-accent-ink" : "text-ink-muted hover:bg-paper-2 hover:text-ink",
       options.disabled && "pointer-events-none opacity-40",
     );
@@ -74,7 +74,7 @@ export function Pagination({ page, totalPages, total, limit, hrefForPage, onPage
 
   return (
     <nav aria-label="Pagination" className="flex flex-col-reverse items-center justify-between gap-3 sm:flex-row">
-      <div className="flex items-center gap-4 text-[13px] text-ink-muted">
+      <div className="flex items-center gap-4 text-ui text-ink-muted">
         <p className="tabular-nums">
           {total === 0 ? (
             "No results"
@@ -94,7 +94,7 @@ export function Pagination({ page, totalPages, total, limit, hrefForPage, onPage
               value={String(limit)}
               options={limitOptions.map((n) => ({ value: String(n), label: String(n) }))}
               onChange={(value) => onLimitChange(Number(value))}
-              className="w-[4.75rem]"
+              className="w-19"
             />
           </div>
         )}
@@ -114,7 +114,7 @@ export function Pagination({ page, totalPages, total, limit, hrefForPage, onPage
               ),
             )}
           </ul>
-          <span className="px-2 text-[13px] tabular-nums text-ink-muted sm:hidden">
+          <span className="px-2 text-ui tabular-nums text-ink-muted sm:hidden">
             Page {page} of {totalPages}
           </span>
           {pageControl(page + 1, <ChevronRightIcon />, { label: "Next page", disabled: page >= totalPages })}

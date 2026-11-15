@@ -42,25 +42,26 @@ export function DoctorProfile({ doctor, counts, hospitals }: DoctorProfileProps)
           <p className="mt-0.5 text-sm leading-5 text-ink-muted">
             {doctor.specialization} · {doctor.hospital}
           </p>
-          <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-[13px] leading-5 text-ink">
-            <div className="flex min-w-0 items-center gap-1.5">
+          {/* On touch screens, 20px between rows, so the phone and email links' 40px tap areas don't overlap. */}
+          <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-ui leading-5 text-ink pointer-coarse:gap-y-5">
+            <div className="relative flex min-w-0 items-center gap-1.5">
               <dt className="text-ink-muted">
                 <PhoneIcon />
                 <span className="sr-only">Phone</span>
               </dt>
               <dd>
-                <a href={`tel:${doctor.phone.replace(/[^\d+]/g, "")}`} className="rounded-sm tabular-nums hover:text-accent-fg focus-ring">
+                <a href={`tel:${doctor.phone.replace(/[^\d+]/g, "")}`} className="rounded-sm tabular-nums after:absolute after:inset-x-0 after:-inset-y-2.5 hover:text-accent-fg focus-ring">
                   {doctor.phone}
                 </a>
               </dd>
             </div>
-            <div className="flex min-w-0 items-center gap-1.5">
+            <div className="relative flex min-w-0 items-center gap-1.5">
               <dt className="text-ink-muted">
                 <MailIcon />
                 <span className="sr-only">Email</span>
               </dt>
               <dd className="min-w-0 truncate">
-                <a href={`mailto:${doctor.email}`} className="rounded-sm hover:text-accent-fg focus-ring">
+                <a href={`mailto:${doctor.email}`} className="rounded-sm after:absolute after:inset-x-0 after:-inset-y-2.5 hover:text-accent-fg focus-ring">
                   {doctor.email}
                 </a>
               </dd>

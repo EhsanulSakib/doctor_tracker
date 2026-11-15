@@ -4,7 +4,7 @@ import { AnimatePresence, m } from "motion/react";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useAnchoredPosition } from "@/hooks/use-anchored-position";
 import { useDismiss } from "@/hooks/use-dismiss";
-import { popIn } from "@/lib/motion";
+import { highlightSpring, menuItem, menuPanel } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { CheckIcon, ChevronDownIcon } from "./icons";
 import { fieldStyles } from "./input";
@@ -200,7 +200,7 @@ export function Select<V extends string>({
         className={cn(
           fieldStyles,
           "flex items-center justify-between gap-2 px-3 text-left focus-visible:ring-3",
-          size === "sm" ? "h-8 text-[13px] sm:text-[13px] pointer-coarse:h-10" : "h-9 pointer-coarse:h-11",
+          size === "sm" ? "h-8 text-ui sm:text-ui pointer-coarse:h-10" : "h-9 pointer-coarse:h-11",
           open && "border-accent ring-3 ring-accent/20",
           className,
         )}
@@ -222,8 +222,8 @@ export function Select<V extends string>({
               aria-label={labelId ? undefined : ariaLabel}
               tabIndex={-1}
               style={{ top: 0, left: 0, visibility: "hidden" }}
-              className="fixed z-60 max-h-[min(var(--panel-max-height,18rem),18rem)] max-w-[calc(100vw-16px)] overflow-y-auto overscroll-contain rounded-panel border border-line bg-surface p-1 shadow-overlay outline-none"
-              variants={popIn}
+              className="fixed z-60 max-h-[min(var(--panel-max-height,18rem),18rem)] max-w-popover overflow-y-auto overscroll-contain rounded-panel border border-line bg-surface p-1.5 shadow-overlay outline-none scrollbar-thin"
+              variants={menuPanel}
               initial="hidden"
               animate="visible"
               exit="exit"
@@ -231,15 +231,17 @@ export function Select<V extends string>({
               {items.map((item, index) => {
                 const isSelected = item.value === value;
                 return (
-                  <li
+                  <m.li
                     key={item.value || "__empty"}
                     id={optionId(index)}
                     role="option"
                     aria-selected={isSelected}
+                    variants={menuItem}
                     className={cn(
-                      "flex cursor-pointer select-none items-center justify-between gap-3 rounded-[4px] px-2.5 py-2 text-sm text-ink pointer-coarse:py-3",
-                      index === active && "bg-paper-2",
-                      isSelected && "font-medium",
+                      "relative flex min-h-9 cursor-pointer items-center justify-between gap-3 rounded-control px-2.5 py-1.5 text-ui text-ink select-none pointer-coarse:min-h-11",
+                      // "All …" (clears the filter) is set apart from the real choices.
+                      emptyOption && index === 0 && "mb-1 text-ink-muted after:absolute after:inset-x-1 after:-bottom-0.75 after:h-px after:bg-line",
+                      isSelected && "font-medium text-accent-fg",
                     )}
                     onPointerMove={() => {
                       if (index !== active) setActive(index);
@@ -248,12 +250,20 @@ export function Select<V extends string>({
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => choose(index)}
                   >
-                    <span className="min-w-0">
+                    {/* One highlight that glides to the hovered / arrowed option instead of jumping. */}
+                    {index === active && (
+                      <m.span aria-hidden layoutId={`${listboxId}-highlight`} transition={highlightSpring} className="absolute inset-0 rounded-control bg-paper-2" />
+                    )}
+                    <span className="relative min-w-0">
                       <span className="block truncate">{item.label}</span>
                       {item.description && <span className="block truncate text-xs font-normal text-ink-muted">{item.description}</span>}
                     </span>
-                    {isSelected && <CheckIcon className="shrink-0 text-accent-fg" />}
-                  </li>
+                    {isSelected && (
+                      <m.span initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={highlightSpring} className="relative shrink-0">
+                        <CheckIcon className="text-accent-fg" strokeWidth={2.25} />
+                      </m.span>
+                    )}
+                  </m.li>
                 );
               })}
             </m.ul>

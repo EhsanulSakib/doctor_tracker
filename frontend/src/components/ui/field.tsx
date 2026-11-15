@@ -39,7 +39,7 @@ export function Field({ label, hint, error, required, className, children }: Fie
 
   return (
     <div className={cn("grid content-start gap-1.5", className)}>
-      <label id={labelId} htmlFor={id} className="text-[13px] font-medium text-ink">
+      <label id={labelId} htmlFor={id} className="text-ui font-medium text-ink">
         {label}
         {required && (
           <span className="ml-0.5 text-danger" aria-hidden>

@@ -23,6 +23,7 @@ export function ThemeToggle() {
     <IconButton
       label="Toggle dark theme"
       onClick={toggle}
+      className="rounded-full"
       icon={
         <>
           <MoonIcon size={18} className="dark:hidden" />

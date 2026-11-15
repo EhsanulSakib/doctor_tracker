@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { Controller, useForm, type Resolver } from "react-hook-form";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Dialog } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { FormAlert } from "@/components/ui/form-alert";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { SuggestInput } from "@/components/ui/suggest-input";
 import { refreshNotifications } from "@/features/notifications/types";
 import { useToast } from "@/hooks/use-toast";
 import { isApiError } from "@/lib/api/errors";
@@ -75,7 +77,6 @@ function DoctorForm({
 }) {
   const router = useRouter();
   const toast = useToast();
-  const hospitalListId = useId();
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
@@ -140,14 +141,13 @@ function DoctorForm({
 
       <Field label="Hospital" required error={errors.hospital?.message}>
         {(p) => (
-          <>
-            <Input {...p} {...register("hospital")} list={hospitalListId} autoComplete="off" placeholder="Start typing to see existing ones" />
-            <datalist id={hospitalListId}>
-              {hospitals.map((hospital) => (
-                <option key={hospital} value={hospital} />
-              ))}
-            </datalist>
-          </>
+          <Controller
+            control={control}
+            name="hospital"
+            render={({ field }) => (
+              <SuggestInput {...p} name={field.name} value={field.value} onChange={field.onChange} onBlur={field.onBlur} suggestions={hospitals} placeholder="Start typing to see existing ones" />
+            )}
+          />
         )}
       </Field>
 
@@ -156,7 +156,13 @@ function DoctorForm({
       </Field>
 
       <Field label="Joined on" required error={errors.joinedAt?.message}>
-        {(p) => <Input {...p} {...register("joinedAt")} type="date" min="1950-01-01" max={todayIso()} />}
+        {(p, { labelId }) => (
+          <Controller
+            control={control}
+            name="joinedAt"
+            render={({ field }) => <DatePicker {...p} labelId={labelId} value={field.value} onChange={field.onChange} onBlur={field.onBlur} min="1950-01-01" max={todayIso()} />}
+          />
+        )}
       </Field>
 
       <Field label="Status" required error={errors.status?.message}>

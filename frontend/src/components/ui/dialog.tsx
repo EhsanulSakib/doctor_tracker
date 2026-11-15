@@ -2,7 +2,9 @@
 
 import { AnimatePresence, m } from "motion/react";
 import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode, type RefObject } from "react";
-import { fade, popIn } from "@/lib/motion";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { below } from "@/lib/breakpoints";
+import { fade, popIn, sheetUp } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { IconButton } from "./icon-button";
 import { XIcon } from "./icons";
@@ -39,6 +41,8 @@ export function Dialog(props: DialogProps) {
 function DialogContent({ onClose, title, description, children, footer, size = "md", dismissible = true, initialFocusRef }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+  // Below sm the dialog is a bottom sheet: it slides up instead of popping in.
+  const phone = useMediaQuery(below("sm"));
   const titleId = useId();
   const descriptionId = useId();
 
@@ -92,12 +96,14 @@ function DialogContent({ onClose, title, description, children, footer, size = "
           "relative flex max-h-[92dvh] w-full flex-col rounded-t-panel border border-line bg-surface shadow-overlay outline-none sm:rounded-panel",
           sizes[size],
         )}
-        variants={popIn}
+        variants={phone ? sheetUp : popIn}
         initial="hidden"
         animate="visible"
         exit="exit"
       >
-        <header className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
+        {/* Bottom-sheet handle on phones (decorative: Escape, the backdrop and the close button dismiss it). */}
+        <div aria-hidden className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-line-strong sm:hidden" />
+        <header className="flex items-start justify-between gap-4 border-b border-line px-5 pt-3 pb-4 sm:pt-4">
           <div className="min-w-0">
             <h2 id={titleId} className="text-base font-semibold text-ink">
               {title}

@@ -27,6 +27,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // The --paper token in each theme (slate-50 / slate-925). A meta tag can't read CSS variables, so
+  // these two stay literal: change them together with globals.css.
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
     { media: "(prefers-color-scheme: dark)", color: "#0b1020" },

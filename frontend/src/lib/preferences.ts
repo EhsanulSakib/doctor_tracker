@@ -31,8 +31,11 @@ export function readSidebarCollapsed(): boolean {
   return document.documentElement.dataset.sidebar === "collapsed";
 }
 
+export const SIDEBAR_EVENT = "dt:sidebar";
+
 export function applySidebarCollapsed(collapsed: boolean) {
   if (collapsed) document.documentElement.dataset.sidebar = "collapsed";
   else delete document.documentElement.dataset.sidebar;
   store(SIDEBAR_KEY, collapsed ? "collapsed" : "expanded");
+  window.dispatchEvent(new Event(SIDEBAR_EVENT));
 }

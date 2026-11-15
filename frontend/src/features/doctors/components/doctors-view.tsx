@@ -33,12 +33,12 @@ export const years = (n: number) => `${n} ${n === 1 ? "yr" : "yrs"}`;
 export function DoctorNameCell({ doctor }: { doctor: Pick<Doctor, "id" | "name" | "email"> }) {
   return (
     // Capped width: a long email truncates instead of pushing the table wider than the screen.
-    <div className="flex max-w-64 min-w-0 items-center gap-3">
+    <div className="relative flex max-w-64 min-w-0 items-center gap-3">
       <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-fg">
         {doctorInitials(doctor.name)}
       </span>
       <div className="min-w-0">
-        <Link href={`/doctors/${doctor.id}`} className="block truncate rounded-sm text-sm leading-5 font-medium text-ink transition-colors hover:text-accent-fg focus-ring">
+        <Link href={`/doctors/${doctor.id}`} className="block truncate rounded-sm text-sm leading-5 font-medium text-ink transition-colors after:absolute after:inset-x-0 after:-inset-y-2.5 hover:text-accent-fg focus-ring">
           {doctor.name}
         </Link>
         <p className="truncate text-xs leading-4 text-ink-muted">{doctor.email}</p>
@@ -53,7 +53,7 @@ export const doctorNameSkeleton = (
     <Skeleton className="size-8 shrink-0 rounded-full" />
     {/* flex-col: the bars' vertical margins must add up, not collapse (20px + 16px lines). */}
     <div className="flex flex-col">
-      <Skeleton className="my-[3px] h-3.5 w-36" />
+      <Skeleton className="my-0.75 h-3.5 w-36" />
       <Skeleton className="my-0.5 h-3 w-44" />
     </div>
   </div>
@@ -77,7 +77,7 @@ export const DOCTOR_COLUMNS: Column<Doctor>[] = [
     cell: (d) => (
       <div className="min-w-0">
         <p className="whitespace-nowrap">{d.specialization}</p>
-        <p className="hidden max-w-56 truncate text-xs leading-4 text-ink-muted md:block 2xl:hidden" title={d.hospital}>
+        <p className="hidden max-w-56 truncate text-xs leading-4 text-ink-muted lg:block 2xl:hidden" title={d.hospital}>
           {d.hospital}
         </p>
       </div>
@@ -85,7 +85,7 @@ export const DOCTOR_COLUMNS: Column<Doctor>[] = [
     mobile: "meta",
     skeleton: (
       <div className="flex flex-col">
-        <Skeleton className="my-[3px] h-3.5 w-24" />
+        <Skeleton className="my-0.75 h-3.5 w-24" />
         <Skeleton className="my-0.5 h-3 w-40 2xl:hidden" />
       </div>
     ),
@@ -108,7 +108,7 @@ export const DOCTOR_COLUMNS: Column<Doctor>[] = [
         {DOCTOR_STATUS_LABELS[d.status]}
       </Badge>
     ),
-    skeleton: <Skeleton className="my-px h-[22px] w-20 rounded-full" />,
+    skeleton: <Skeleton className="my-px h-5.5 w-20 rounded-full" />,
   },
   {
     id: "experience",
@@ -195,6 +195,7 @@ export function DoctorsView({ doctors, meta, params, hospitals }: DoctorsViewPro
       <div aria-busy={isPending} className={cn("flex min-h-0 flex-col transition-opacity duration-200", isPending && "opacity-60")}>
         <DataTable
           fill
+          cardsBelow="lg"
           columns={DOCTOR_COLUMNS}
           rows={doctors}
           getRowId={(d) => d.id}

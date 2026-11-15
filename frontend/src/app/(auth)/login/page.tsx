@@ -3,6 +3,7 @@ import Image from "next/image";
 import doctorPhoto from "@/assets/login-doctor.jpg";
 import { BrandMark } from "@/components/layout/brand";
 import { LoginForm } from "@/features/auth/login-form";
+import { atLeast } from "@/lib/breakpoints";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -24,23 +25,23 @@ const FEATURES = [
 export default function LoginPage() {
   return (
     <main className="grid min-h-dvh bg-surface lg:h-dvh lg:grid-cols-2 lg:overflow-hidden">
-      <aside className="relative hidden overflow-hidden bg-[#1e1b4b] lg:block">
+      <aside className="relative hidden overflow-hidden bg-photo-scrim lg:block">
         <Image
           src={doctorPhoto}
           alt=""
           fill
-          sizes="(min-width: 1280px) 50vw, (min-width: 1024px) 60vw, 1px"
+          sizes={`${atLeast("xl")} 50vw, ${atLeast("lg")} 60vw, 1px`}
           placeholder="blur"
           loading="eager"
           fetchPriority="high"
           className="object-cover object-[35%_30%]"
         />
         {/* Deep indigo at the bottom for the text; the right edge fades into the form side's background. */}
-        <div aria-hidden className="absolute inset-x-0 bottom-0 h-3/5 bg-linear-to-t from-[#1e1b4b] via-[#1e1b4b]/80 to-transparent" />
-        <div aria-hidden className="absolute inset-x-0 top-0 h-28 bg-linear-to-b from-[#1e1b4b]/50 to-transparent" />
+        <div aria-hidden className="absolute inset-x-0 bottom-0 h-3/5 bg-linear-to-t from-photo-scrim via-photo-scrim/80 to-transparent" />
+        <div aria-hidden className="absolute inset-x-0 top-0 h-28 bg-linear-to-b from-photo-scrim/50 to-transparent" />
         <div aria-hidden className="absolute inset-y-0 right-0 w-1/3 bg-linear-to-r from-transparent to-surface" />
 
-        <div className="relative flex h-full flex-col justify-between p-10 text-white xl:p-14">
+        <div className="relative flex h-full flex-col justify-between p-10 text-on-photo xl:p-14">
           <div className="flex items-center gap-3">
             <BrandMark inverted />
             <span className="text-lg font-semibold tracking-tight">Doctor Tracker</span>
@@ -48,7 +49,7 @@ export default function LoginPage() {
 
           <div className="max-w-md pb-2">
             <h2 className="text-3xl font-semibold tracking-tight">Doctor and patient management</h2>
-            <ul className="mt-6 list-disc space-y-2 pl-5 text-[15px] text-white/90 marker:text-white/60">
+            <ul className="mt-6 list-disc space-y-2 pl-5 text-lead text-on-photo/90 marker:text-on-photo/60">
               {FEATURES.map((feature) => (
                 <li key={feature}>{feature}</li>
               ))}

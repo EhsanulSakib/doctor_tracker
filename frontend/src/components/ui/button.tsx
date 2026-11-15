@@ -8,7 +8,7 @@ export type ButtonSize = "sm" | "md" | "lg";
 const base =
   "relative inline-flex select-none items-center justify-center whitespace-nowrap rounded-control font-medium " +
   "transition-[background-color,color,border-color,transform] duration-150 ease-clinical focus-ring " +
-  "active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 aria-busy:cursor-progress";
+  "active:scale-98 disabled:pointer-events-none disabled:opacity-50 aria-busy:cursor-progress";
 
 const variants: Record<ButtonVariant, string> = {
   primary: "bg-accent text-accent-ink shadow-sm shadow-accent/25 hover:bg-accent-hover",
@@ -19,9 +19,9 @@ const variants: Record<ButtonVariant, string> = {
 
 // 36px tall with a mouse; 44px on touch screens (minimum comfortable touch target).
 const sizes: Record<ButtonSize, string> = {
-  sm: "h-8 gap-1.5 px-3 text-[13px] pointer-coarse:h-10",
+  sm: "h-8 gap-1.5 px-3 text-ui pointer-coarse:h-10",
   md: "h-9 gap-2 px-3.5 text-sm pointer-coarse:h-11",
-  lg: "h-11 gap-2 px-5 text-[15px]",
+  lg: "h-11 gap-2 px-5 text-lead",
 };
 
 /** The button look, for links that should appear as buttons (`<Link className={buttonStyles()}>`). */

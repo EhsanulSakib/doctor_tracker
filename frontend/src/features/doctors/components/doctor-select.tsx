@@ -11,7 +11,7 @@ import { useDebouncedCallback } from "@/hooks/use-debounce";
 import { useDismiss } from "@/hooks/use-dismiss";
 import { clientFetch } from "@/lib/api/client-fetch";
 import type { ApiData } from "@/lib/api/types";
-import { popIn } from "@/lib/motion";
+import { highlightSpring, menuItem, menuPanel } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 /** `GET /api/doctors/options` item. */
@@ -203,7 +203,7 @@ export function DoctorSelect({
               onChange(null);
               inputRef.current?.focus();
             }}
-            className="absolute top-1/2 right-1.5 flex size-7 -translate-y-1/2 items-center justify-center rounded-[6px] text-ink-muted hover:bg-paper-2 hover:text-ink focus-ring pointer-coarse:size-9"
+            className="absolute top-1/2 right-1.5 flex size-7 -translate-y-1/2 items-center justify-center rounded-tag text-ink-muted hover:bg-paper-2 hover:text-ink focus-ring pointer-coarse:size-9"
           >
             <XIcon size={14} />
           </button>
@@ -221,8 +221,8 @@ export function DoctorSelect({
             <m.div
               ref={panelRef}
               style={{ top: 0, left: 0, visibility: "hidden" }}
-              className="fixed z-60 max-w-[calc(100vw-16px)] overflow-hidden rounded-panel border border-line bg-surface shadow-overlay"
-              variants={popIn}
+              className="fixed z-60 max-w-popover overflow-hidden rounded-panel border border-line bg-surface shadow-overlay"
+              variants={menuPanel}
               initial="hidden"
               animate="visible"
               exit="exit"
@@ -233,37 +233,40 @@ export function DoctorSelect({
                 aria-labelledby={labelId}
                 aria-label={labelId ? undefined : (ariaLabel ?? "Doctors")}
                 aria-busy={status === "loading"}
-                className="max-h-[min(var(--panel-max-height,18rem),18rem)] overflow-y-auto overscroll-contain p-1"
+                className="max-h-[min(var(--panel-max-height,18rem),18rem)] overflow-y-auto overscroll-contain p-1.5 scrollbar-thin"
               >
                 {shown.map((doctor, index) => {
                   const selected = doctor.id === value?.id;
                   return (
-                    <li
+                    <m.li
                       key={doctor.id}
                       id={optionId(index)}
                       role="option"
                       aria-selected={selected}
+                      variants={menuItem}
                       className={cn(
-                        "flex cursor-pointer items-center justify-between gap-3 rounded-[4px] px-2.5 py-2 text-sm text-ink select-none pointer-coarse:py-3",
-                        index === active && "bg-paper-2",
-                        selected && "font-medium",
+                        "relative flex cursor-pointer items-center justify-between gap-3 rounded-control px-2.5 py-1.5 text-ui text-ink select-none pointer-coarse:py-2.5",
+                        selected && "font-medium text-accent-fg",
                       )}
                       onPointerMove={() => index !== active && setActive(index)}
                       // Keep focus in the input (combobox pattern); the click still picks.
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => choose(doctor)}
                     >
-                      <span className="min-w-0">
+                      {index === active && (
+                        <m.span aria-hidden layoutId={`${listId}-highlight`} transition={highlightSpring} className="absolute inset-0 rounded-control bg-paper-2" />
+                      )}
+                      <span className="relative min-w-0">
                         <span className="block truncate">{doctor.name}</span>
                         <span className="block truncate text-xs font-normal text-ink-muted">{doctor.specialization}</span>
                       </span>
-                      {selected && <CheckIcon className="shrink-0 text-accent-fg" />}
-                    </li>
+                      {selected && <CheckIcon className="relative shrink-0 text-accent-fg" strokeWidth={2.25} />}
+                    </m.li>
                   );
                 })}
               </ul>
               {message && (
-                <p role="status" className="px-3.5 py-3 text-[13px] text-ink-muted">
+                <p role="status" className="px-3.5 py-3 text-ui text-ink-muted">
                   {message}
                 </p>
               )}

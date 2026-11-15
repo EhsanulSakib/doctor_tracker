@@ -34,6 +34,8 @@ Bundled docs for this exact version live in `frontend/node_modules/next/dist/doc
 The original "Clinical ledger" palette (paper / ink / teal, IBM Plex) was replaced at the user's request with a modern **slate + indigo / violet** look: Inter font (switched to Plus Jakarta Sans later that day with the top bar redesign, see 3.2), 8 / 12 px radii, soft card shadows, full-width content with tighter padding. The token names stayed the same, so components only changed where noted (`text-accent` → `text-accent-fg`, new `Card`, pill badges).
 
 ## Design tokens (current)
+The full, maintained reference is [`docs/design-system.md`](../../../design-system.md). Since the token audit (2026-11-15), `globals.css` is organised in three layers: primitives (`--indigo-600`…) → these semantic tokens → component tokens (`--chart-*`, `--photo-scrim`, `--focus-ring`…). The values below did not change.
+
 | Token | Light | Dark | Use |
 |---|---|---|---|
 | `paper` | `#F8FAFC` | `#0B1020` | app background |
@@ -49,7 +51,7 @@ The original "Clinical ledger" palette (paper / ink / teal, IBM Plex) was replac
 | `danger` / `warning` / `success` / `info` (+ `-soft`) | `#B91C1C` / `#B45309` / `#047857` / `#0369A1` | `#F87171` / `#FBBF24` / `#34D399` / `#7DD3FC` | statuses, destructive actions |
 | `overlay` | slate-900 at 45% | slate-950 at 70% | dialog backdrop |
 
-Text/background pairs meet WCAG AA (4.5:1), including badge text on its soft background. Radius: `rounded-control` 8px, `rounded-panel` 12px. Shadows: `shadow-card` (cards, tables, secondary buttons), `shadow-overlay` (dialogs, popovers, toasts). Ease `ease-clinical` = `cubic-bezier(0.2, 0.8, 0.2, 1)`. Type: Inter (variable) for UI, JetBrains Mono for codes; `text-label` (11px uppercase), `text-title` (22px). Theme switch: `data-theme="dark"` on `<html>`; `dark:` utilities follow it.
+Text/background pairs meet WCAG AA (4.5:1), including badge text on its soft background. Radius: `rounded-mark` 4px, `rounded-tag` 6px, `rounded-control` 8px, `rounded-panel` 12px. Shadows: `shadow-card` (cards, tables, secondary buttons), `shadow-overlay` (dialogs, popovers, toasts). Ease `ease-clinical` = `cubic-bezier(0.2, 0.8, 0.2, 1)`. Type: Plus Jakarta Sans (variable) for UI, JetBrains Mono for codes; `text-micro` 10px, `text-caption` 11px, `text-ui` 13px, `text-lead` 15px, `text-figure` 26px, `text-label` (11px uppercase), `text-title` (22px). Theme switch: `data-theme="dark"` on `<html>`; `dark:` utilities follow it.
 
 ## Bangladesh conventions (user requirement, 2026-11-15)
 | What | Choice |

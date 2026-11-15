@@ -28,7 +28,7 @@ export function Topbar({ userSlot }: { userSlot: ReactNode }) {
   const detail = section && pathname !== section.href ? tail : null;
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b border-line bg-surface px-3 sm:px-5 lg:px-6">
+    <header className="sticky top-0 z-20 flex h-topbar shrink-0 items-center gap-2 border-b border-line bg-surface px-3 sm:px-5 lg:px-6">
       <IconButton
         label="Open navigation"
         icon={<MenuIcon size={20} />}
@@ -37,10 +37,10 @@ export function Topbar({ userSlot }: { userSlot: ReactNode }) {
         aria-haspopup="dialog"
         onClick={() => dispatch(mobileNavSet(true))}
       />
-      {section && <p className="min-w-0 truncate text-[15px] font-semibold tracking-tight text-ink md:hidden">{detail ?? section.label}</p>}
+      {section && <p className="min-w-0 truncate text-lead font-semibold tracking-tight text-ink md:hidden">{detail ?? section.label}</p>}
 
       <nav aria-label="Breadcrumb" className="hidden min-w-0 md:block">
-        <ol className="flex items-center gap-1.5 text-[13px]">
+        <ol className="flex items-center gap-1.5 text-ui">
           <li>
             <Link href="/dashboard" className="rounded-sm font-medium text-ink-muted transition-colors hover:text-ink focus-ring">
               Doctor Tracker

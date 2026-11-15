@@ -29,8 +29,9 @@ type PopoverProps = {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   /** Where focus goes on open: the first control (default), or the panel itself (lists whose first
-   *  control is an action you don't want pre-selected, e.g. "Mark all as read"). */
-  initialFocus?: "first" | "panel";
+   *  control is an action you don't want pre-selected, e.g. "Mark all as read"), or "none" when the
+   *  content focuses something itself. */
+  initialFocus?: "first" | "panel" | "none";
   className?: string;
 };
 
@@ -73,6 +74,8 @@ export function Popover({
   useEffect(() => {
     if (!open) return;
     const panel = panelRef.current;
+    // "none": the content moves focus itself (a calendar focuses the selected day).
+    if (initialFocus === "none") return;
     (initialFocus === "panel" ? panel : (getFocusable(panel)[0] ?? panel))?.focus({ preventScroll: true });
   }, [open, initialFocus]);
 
@@ -121,7 +124,7 @@ export function Popover({
               // Positioned by useAnchoredPosition (writes top/left before paint).
               style={{ top: 0, left: 0, visibility: "hidden" }}
               className={cn(
-                "fixed z-60 max-w-[calc(100vw-16px)] rounded-panel border border-line bg-surface p-3 shadow-overlay outline-none",
+                "fixed z-60 max-w-popover rounded-panel border border-line bg-surface p-3 shadow-overlay outline-none",
                 className,
               )}
               variants={popIn}
